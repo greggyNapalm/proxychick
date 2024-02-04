@@ -26,3 +26,6 @@ $ go run cmd/main.go -h
   -to int
     	Timeout for entire HTTP request in seconds (default 10)
 ```
+
+# Demo
+![1st ver 100 proxies](https://github.com/greggyNapalm/proxychick/blob/main/docs/examples/100proxies-cmd-demo-1st-ver.gif?raw=true)
