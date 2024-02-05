@@ -1,7 +1,7 @@
 package job
 
 import (
-	"github.com/greggyNapalm/proxychick/internal/httpx"
+	"github.com/greggyNapalm/proxychick/pkg/httpx"
 	"log"
 	url "net/url"
 	"slices"

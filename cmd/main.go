@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gocarina/gocsv"
-	"github.com/greggyNapalm/proxychick/internal/httpx"
-	"github.com/greggyNapalm/proxychick/internal/job"
-	"github.com/greggyNapalm/proxychick/internal/utils"
+	"github.com/greggyNapalm/proxychick/pkg/httpx"
+	"github.com/greggyNapalm/proxychick/pkg/job"
+	"github.com/greggyNapalm/proxychick/pkg/utils"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"io/ioutil"
@@ -30,7 +30,7 @@ type CmdCfg struct {
 func NewCmdCfg() CmdCfg {
 	var rv = CmdCfg{}
 	flag.IntVar(&rv.maxConcurrency, "c", 300, "number of simultaneous HTTP requests(maxConcurrency)")
-	flag.StringVar(&rv.inPath, "i", "STDIN", "path to the proxylist file")
+	flag.StringVar(&rv.inPath, "i", "proxylist.txt", "path to the proxylist file or STDIN")
 	flag.StringVar(&rv.outPath, "o", "STDOUT", "path to the results file")
 	flag.BoolVar(&rv.isSilent, "s", false, "Disable the progress meter")
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in list, choose one of http/https/socks4/socks4a/socks5/socks5h")
