@@ -18,11 +18,14 @@ type PListEvanJobCfg struct {
 func AdaptRowProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {
 	prxChemas := []string{"http", "https", "socks4", "socks4a", "socks5", "socks5h"}
 	sSplited := strings.Split(prxStr, ":")
+	//	fmt.Println("prxStr:", prxStr)
+	//	fmt.Println(sSplited)
 	var prxURLFormated string
-	//	err = errors.New("Input proxylist: unknown format. Please use one og the follow: login:password@host:port or host:port:login:password")
 	err = proxyURLFormatError
 
-	if slices.Contains(prxChemas, sSplited[0]) { // str starts with protocol
+	if len(sSplited) < 3 {
+		return
+	} else if slices.Contains(prxChemas, sSplited[0]) { // str starts with protocol
 		// complete URL with the protocol scheme
 		prxURLFormated = prxStr
 	} else if _, err := strconv.Atoi(sSplited[2]); err == nil { // last field is port number
@@ -36,7 +39,7 @@ func AdaptRowProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, er
 		parsedURL, err = url.Parse(prxURLFormated)
 		if err != nil {
 			log.Fatal("Can't parse Proxy URL:" + prxURLFormated)
-			panic(err)
+			return
 		}
 	}
 	return
