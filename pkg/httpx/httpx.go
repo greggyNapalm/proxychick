@@ -16,14 +16,25 @@ type Latency struct {
 	TLSHandshake int `csv:"tlsHandShake",json:"tlsHandShake"`
 }
 
+type PChickError struct {
+	Err error
+}
+
+func (err *PChickError) MarshalCSV() (string, error) {
+	if err.Err == nil {
+		return "", nil
+	}
+	return err.Err.Error(), nil
+}
+
 type Result struct {
-	ProxyURL       string  `csv:"proxy",json:"proxy"`
-	Status         bool    `csv:"result",json:"result"`
-	TargetURL      string  `csv:"-",json:"endpoint"`
-	RespStatusCode int     `csv:"targetStatus",json:"targetStatus"`
-	RespBody       string  `csv:"-",json:"-"`
-	Latency        Latency `csv:"latency",json:"latency"`
-	Error          error   `csv:"error",json:"error"`
+	ProxyURL       string      `csv:"proxy",json:"proxy"`
+	Status         bool        `csv:"result",json:"result"`
+	TargetURL      string      `csv:"-",json:"endpoint"`
+	RespStatusCode int         `csv:"targetStatus",json:"targetStatus"`
+	RespBody       string      `csv:"-",json:"-"`
+	Latency        Latency     `csv:"latency",json:"latency"`
+	Error          PChickError `csv:"error",json:"error"`
 }
 
 func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBody bool) (res *Result, err error) {

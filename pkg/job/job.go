@@ -54,8 +54,11 @@ func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan httpx.R
 	for _, prxURL := range prxURLs {
 		<-chTxConnPool
 		go func(url url.URL) {
-			res, _ := httpx.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, false)
-			ch <- *res
+			res, err := httpx.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, false)
+			res.Error = httpx.PChickError{err}
+			if ch != nil {
+				ch <- *res
+			}
 			chTxConnPool <- struct{}{}
 		}(*prxURL)
 	}
