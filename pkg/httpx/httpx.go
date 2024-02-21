@@ -28,7 +28,7 @@ func (err *PChickError) MarshalCSV() (string, error) {
 	if err.Err == nil {
 		return "", nil
 	}
-	return err.Err.Error(), nil
+	return strings.ReplaceAll(err.Err.Error(), ",", ";"), nil
 }
 
 type Result struct {
