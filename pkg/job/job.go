@@ -15,7 +15,7 @@ type PListEvanJobCfg struct {
 	TimeOut        int
 }
 
-func AdaptRowProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {
+func AdaptRawProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {
 	prxChemas := []string{"http", "https", "socks4", "socks4a", "socks5", "socks5h"}
 	sSplited := strings.Split(prxStr, ":")
 	//	fmt.Println("prxStr:", prxStr)
@@ -54,8 +54,17 @@ func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan httpx.R
 	for _, prxURL := range prxURLs {
 		<-chTxConnPool
 		go func(url url.URL) {
-			res, err := httpx.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, false)
-			res.Error = httpx.PChickError{err}
+			res, err := httpx.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, true)
+			res.Enrich(err)
+			//res.Error = httpx.PChickError{err}
+			//if res.ProxyStatusCode != 200 {
+			//	if val, ok := res.ProxyRespHeader["Reason"]; ok { // SOAX header detected
+			//		res.Error = httpx.PChickError{errors.New("Proxy Error:" + strings.Split(val[0], ";")[0])}
+			//	}
+			//	if val, ok := res.ProxyRespHeader["X-Luminati-Error"]; ok { // Luminati header detected
+			//		res.Error = httpx.PChickError{errors.New("Proxy Error:" + val[0])}
+			//	}
+			//}
 			if ch != nil {
 				ch <- *res
 			}

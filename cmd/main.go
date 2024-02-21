@@ -36,7 +36,7 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in list, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
 
-	var targetURLStr = flag.String("t", "https://www.cloudflare.com/cdn-cgi/trace", "Target URL")
+	var targetURLStr = flag.String("t", "https://api.datascrape.tech/latest/ip", "Target URL")
 	flag.Parse()
 
 	targetURL, err := url.Parse(*targetURLStr)
@@ -108,7 +108,7 @@ func main() {
 		cmdCfg.timeOut,
 	}
 	for _, PrxStrRaw := range pStringsRaw {
-		prxURL, err := job.AdaptRowProxyStr(PrxStrRaw, cmdCfg.prxProto)
+		prxURL, err := job.AdaptRawProxyStr(PrxStrRaw, cmdCfg.prxProto)
 		if err != nil {
 			log.Fatal(PrxStrRaw + " | " + err.Error())
 		} else {
