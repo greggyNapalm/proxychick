@@ -16,22 +16,29 @@ go get github.com/greggyNapalm/proxychick
 
 ```bash
 $ go run cmd/main.go -h
-  -c int
+   -c int
     	number of simultaneous HTTP requests(maxConcurrency) (default 300)
   -i string
-    	path to the proxylist file (default "STDIN")
+    	path to the proxylist file or STDIN (default "proxylist.txt")
+  -loop int
+    	Loop over proxylist content N times (default 1)
   -o string
     	path to the results file (default "STDOUT")
   -p string
-    	Proxy protocol. If not specified in list, choose one of http/https/socks4/socks4a/socks5/socks5h (default "http")
+    	Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h (default "http")
   -s	Disable the progress meter
   -t string
-    	Target URL (default "https://www.cloudflare.com/cdn-cgi/trace")
+    	Target URL (default "https://api.datascrape.tech/latest/ip")
   -to int
     	Timeout for entire HTTP request in seconds (default 10)
 ```
 
-## Results table
+## Results
+
+### Diagram
+<img src="/Users/gregorykomissarov/Downloads/http-proxy-over-tcp.svg">
+
+### Table
 | Column name          | Type and Dimention | Description                                                                                                                                      |
 |----------------------|:------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------|
 | proxy                |       string       | Proxy URL that was used in test                                                                                                                  |

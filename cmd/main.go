@@ -34,7 +34,7 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.inPath, "i", "proxylist.txt", "path to the proxylist file or STDIN")
 	flag.StringVar(&rv.outPath, "o", "STDOUT", "path to the results file")
 	flag.BoolVar(&rv.isSilent, "s", false, "Disable the progress meter")
-	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in list, choose one of http/https/socks4/socks4a/socks5/socks5h")
+	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
 
