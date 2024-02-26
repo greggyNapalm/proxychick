@@ -25,6 +25,7 @@ type CmdCfg struct {
 	isSilent       bool
 	prxProto       string
 	timeOut        int
+	loop           int
 }
 
 func NewCmdCfg() CmdCfg {
@@ -35,6 +36,7 @@ func NewCmdCfg() CmdCfg {
 	flag.BoolVar(&rv.isSilent, "s", false, "Disable the progress meter")
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in list, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
+	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
 
 	var targetURLStr = flag.String("t", "https://api.datascrape.tech/latest/ip", "Target URL")
 	flag.Parse()
@@ -114,6 +116,14 @@ func main() {
 		} else {
 			pStringsFormated = append(pStringsFormated, prxURL)
 		}
+	}
+	fmt.Println("cmdCfg.loop:", cmdCfg.loop)
+	if cmdCfg.loop > 1 {
+		var tmpStringsFormated []*url.URL
+		for _ = range cmdCfg.loop {
+			tmpStringsFormated = append(tmpStringsFormated, pStringsFormated...)
+		}
+		pStringsFormated = tmpStringsFormated
 	}
 	go job.EvaluateProxyList(pStringsFormated, &jobCfg, resultsCh)
 	if !(cmdCfg.isSilent) {
