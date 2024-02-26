@@ -36,7 +36,7 @@ $ go run cmd/main.go -h
 ## Results
 
 ### Diagram
-<img src="/Users/gregorykomissarov/Downloads/http-proxy-over-tcp.svg">
+<img src="https://raw.githubusercontent.com/greggyNapalm/proxychick/main/docs/diagrams/http-proxy-over-tcp.svg?sanitize=true">
 
 ### Table
 | Column name          | Type and Dimention | Description                                                                                                                                      |
