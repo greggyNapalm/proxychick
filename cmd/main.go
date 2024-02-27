@@ -18,7 +18,11 @@ import (
 	"syscall"
 )
 
-var version string = "0.0.1"
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 type CmdCfg struct {
 	maxConcurrency int
@@ -45,7 +49,7 @@ func NewCmdCfg() CmdCfg {
 
 	flag.Parse()
 	if *showVersion {
-		fmt.Println(version)
+		fmt.Printf("proxychick %s, commit %s, built at %s", version, commit, date)
 		syscall.Exit(0)
 	}
 	targetURL, err := url.Parse(*targetURLStr)
