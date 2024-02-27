@@ -4,7 +4,8 @@ Golang-powered library and command line tool to evaluate proxylist.
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e5fc956874694e83a35d0b4ec16161be)](https://app.codacy.com/gh/greggyNapalm/proxychick/dashboard)
 [![codebeat](https://goreportcard.com/badge/github.com/greggyNapalm/proxychick)](https://goreportcard.com/report/github.com/greggyNapalm/proxychick)
 ## Installation
-ProxyChick is available using the standard go get command.
+ProxyChick is available using [pre-build binaries on releases page](https://github.com/greggyNapalm/proxychick/releases) and the standard go get command.
+
 
 Install by running:
 
