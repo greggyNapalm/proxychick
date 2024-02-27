@@ -15,7 +15,10 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"syscall"
 )
+
+var version string = "0.0.1"
 
 type CmdCfg struct {
 	maxConcurrency int
@@ -37,10 +40,14 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
-
 	var targetURLStr = flag.String("t", "https://api.datascrape.tech/latest/ip", "Target URL")
-	flag.Parse()
+	var showVersion = flag.Bool("version", false, "Show version and exit")
 
+	flag.Parse()
+	if *showVersion {
+		fmt.Println(version)
+		syscall.Exit(0)
+	}
 	targetURL, err := url.Parse(*targetURLStr)
 	if err != nil {
 		log.Fatal("Can't parse Target URL:" + *targetURLStr)
