@@ -12,6 +12,7 @@ import (
 type PListEvanJobCfg struct {
 	MaxConcurrency int
 	TargetURL      url.URL
+	TargetAddr     string
 	TimeOut        int
 	Transport      string
 	Debug          bool
@@ -20,8 +21,6 @@ type PListEvanJobCfg struct {
 func AdaptRawProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {
 	prxChemas := []string{"http", "https", "socks4", "socks4a", "socks5", "socks5h"}
 	sSplited := strings.Split(prxStr, ":")
-	//	fmt.Println("prxStr:", prxStr)
-	//	fmt.Println(sSplited)
 	var prxURLFormated string
 	err = proxyURLFormatError
 
@@ -62,7 +61,7 @@ func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan client.
 				res, err = client.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, true)
 				res.EnrichHTTP(err)
 			} else if cfg.Transport == "udp" {
-				res, err = client.TestUDPEcho(&cfg.TargetURL, &url, cfg.TimeOut, true, cfg.Debug)
+				res, err = client.TestUDPEcho(&cfg.TargetAddr, &url, cfg.TimeOut, true, cfg.Debug)
 				res.EnrichUdpEcho(err)
 			}
 			if ch != nil {

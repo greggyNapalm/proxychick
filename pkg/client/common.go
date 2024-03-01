@@ -71,7 +71,11 @@ func (res *Result) EnrichHTTP(err error) error {
 
 func (res *Result) EnrichUdpEcho(err error) error {
 	if res.RespPayload != "" {
-		if res.TargetURL == "http://api.datascrape.tech" {
+		if err != nil {
+			panic(err)
+		}
+		//TODO: It might be better to rewrite using DNS lookup instead hardocded ip_addr
+		if res.TargetURL == "api.datascrape.tech:80" || res.TargetURL == "194.76.46.8:80" {
 			payload := map[string]string{}
 			json.Unmarshal([]byte(res.RespPayload), &payload)
 			res.ProxyNodeIPAddr = payload["clent_ip_addr"]

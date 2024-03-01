@@ -28,6 +28,7 @@ var (
 type CmdCfg struct {
 	maxConcurrency int
 	targetURL      *url.URL
+	targetAddr     string
 	inPath         string
 	outPath        string
 	isSilent       bool
@@ -38,6 +39,8 @@ type CmdCfg struct {
 }
 
 func NewCmdCfg() CmdCfg {
+	defaultTCPTarget := "https://api.datascrape.tech/latest/ip"
+	defaultUDPTarget := "api.datascrape.tech:80"
 	var rv = CmdCfg{}
 	flag.IntVar(&rv.maxConcurrency, "c", 300, "number of simultaneous HTTP requests(maxConcurrency)")
 	flag.StringVar(&rv.inPath, "i", "proxylist.txt", "path to the proxylist file or STDIN")
@@ -47,7 +50,7 @@ func NewCmdCfg() CmdCfg {
 	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
 	flag.StringVar(&rv.transport, "transport", "tcp", "Transport protocol for interaction with the target. Will be incapsulated into proxy protocol.")
-	var targetURLStr = flag.String("t", "https://api.datascrape.tech/latest/ip", "Target URL")
+	var targetAddr = flag.String("t", defaultTCPTarget, "Target URL(TCP) and HOST:PORT(UDP)")
 	var showVersion = flag.Bool("version", false, "Show version and exit")
 	var debugCmd = flag.Bool("verbose", false, "Enables debug logs")
 	flag.Parse()
@@ -60,12 +63,21 @@ func NewCmdCfg() CmdCfg {
 	if *debugCmd || debugEnv != "" {
 		debug = true
 	}
-	targetURL, err := url.Parse(*targetURLStr)
-	if err != nil {
-		log.Fatal("Can't parse Target URL:" + *targetURLStr)
-		panic(err)
+	if rv.transport == "tcp" {
+		targetURL, err := url.Parse(*targetAddr)
+		if err != nil {
+			log.Fatal("Can't parse Target URL:" + *targetAddr)
+			panic(err)
+		}
+		rv.targetURL = targetURL
+	} else if rv.transport == "udp" {
+		rv.targetURL = &url.URL{}
+		if *targetAddr == defaultTCPTarget {
+			rv.targetAddr = defaultUDPTarget
+		} else {
+			rv.targetAddr = *targetAddr
+		}
 	}
-	rv.targetURL = targetURL
 
 	return rv
 }
@@ -122,11 +134,11 @@ func main() {
 	var pStringsFormated []*url.URL
 	cmdCfg := NewCmdCfg()
 	pStringsRaw = GetProxyStrings(cmdCfg.inPath)
-	//fmt.Printf("%+q\n", pStringsRaw)
 	resultsCh := make(chan client.Result, len(pStringsRaw))
 	jobCfg := job.PListEvanJobCfg{
 		cmdCfg.maxConcurrency,
 		*cmdCfg.targetURL,
+		cmdCfg.targetAddr,
 		cmdCfg.timeOut,
 		cmdCfg.transport,
 		debug,
