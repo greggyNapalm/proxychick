@@ -63,6 +63,8 @@ func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan client.
 			} else if cfg.Transport == "udp" {
 				res, err = client.TestUDPEcho(&cfg.TargetAddr, &url, cfg.TimeOut, true, cfg.Debug)
 				res.EnrichUdpEcho(err)
+			} else {
+				return
 			}
 			if ch != nil {
 				ch <- *res
