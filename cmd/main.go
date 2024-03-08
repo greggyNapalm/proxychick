@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gocarina/gocsv"
-	"github.com/greggyNapalm/proxychick/pkg/httpx"
+	"github.com/greggyNapalm/proxychick/pkg/client"
 	"github.com/greggyNapalm/proxychick/pkg/job"
 	"github.com/greggyNapalm/proxychick/pkg/utils"
 	"github.com/schollz/progressbar/v3"
@@ -22,20 +22,25 @@ var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
+	debug   = false
 )
 
 type CmdCfg struct {
 	maxConcurrency int
 	targetURL      *url.URL
+	targetAddr     string
 	inPath         string
 	outPath        string
 	isSilent       bool
 	prxProto       string
 	timeOut        int
 	loop           int
+	transport      string
 }
 
 func NewCmdCfg() CmdCfg {
+	defaultTCPTarget := "https://api.datascrape.tech/latest/ip"
+	defaultUDPTarget := "api.datascrape.tech:80"
 	var rv = CmdCfg{}
 	flag.IntVar(&rv.maxConcurrency, "c", 300, "number of simultaneous HTTP requests(maxConcurrency)")
 	flag.StringVar(&rv.inPath, "i", "proxylist.txt", "path to the proxylist file or STDIN")
@@ -44,20 +49,36 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
-	var targetURLStr = flag.String("t", "https://api.datascrape.tech/latest/ip", "Target URL")
+	flag.StringVar(&rv.transport, "transport", "tcp", "Transport protocol for interaction with the target. Will be incapsulated into proxy protocol.")
+	var targetAddr = flag.String("t", defaultTCPTarget, "Target URL(TCP) and HOST:PORT(UDP)")
 	var showVersion = flag.Bool("version", false, "Show version and exit")
-
+	var debugCmd = flag.Bool("verbose", false, "Enables debug logs")
 	flag.Parse()
+
+	var debugEnv = os.Getenv("PROXYCHICK_DEBUG")
 	if *showVersion {
 		fmt.Printf("proxychick %s, commit %s, built at %s", version, commit, date)
 		syscall.Exit(0)
 	}
-	targetURL, err := url.Parse(*targetURLStr)
-	if err != nil {
-		log.Fatal("Can't parse Target URL:" + *targetURLStr)
-		panic(err)
+	if *debugCmd || debugEnv != "" {
+		debug = true
 	}
-	rv.targetURL = targetURL
+	if rv.transport == "tcp" {
+		targetURL, err := url.Parse(*targetAddr)
+		if err != nil {
+			log.Fatal("Can't parse Target URL:" + *targetAddr)
+			panic(err)
+		}
+		rv.targetURL = targetURL
+	} else if rv.transport == "udp" {
+		rv.targetURL = &url.URL{}
+		if *targetAddr == defaultTCPTarget {
+			rv.targetAddr = defaultUDPTarget
+		} else {
+			rv.targetAddr = *targetAddr
+		}
+	}
+
 	return rv
 }
 
@@ -81,7 +102,7 @@ func GetProxyStrings(inPath string) []string {
 	return rv
 }
 
-func formatResulst(results []*httpx.Result, format string) (rv string, err error) {
+func formatResulst(results []*client.Result, format string) (rv string, err error) {
 	if format == "" {
 		format = "csv"
 	}
@@ -107,18 +128,20 @@ func retFinalText(outPath string, txt string) {
 }
 
 func main() {
-	var results []*httpx.Result
+	var results []*client.Result
 	var bar *progressbar.ProgressBar
 	var pStringsRaw []string
 	var pStringsFormated []*url.URL
 	cmdCfg := NewCmdCfg()
 	pStringsRaw = GetProxyStrings(cmdCfg.inPath)
-	//fmt.Printf("%+q\n", pStringsRaw)
-	resultsCh := make(chan httpx.Result, len(pStringsRaw))
+	resultsCh := make(chan client.Result, len(pStringsRaw))
 	jobCfg := job.PListEvanJobCfg{
 		cmdCfg.maxConcurrency,
 		*cmdCfg.targetURL,
+		cmdCfg.targetAddr,
 		cmdCfg.timeOut,
+		cmdCfg.transport,
+		debug,
 	}
 	for _, PrxStrRaw := range pStringsRaw {
 		prxURL, err := job.AdaptRawProxyStr(PrxStrRaw, cmdCfg.prxProto)
@@ -128,7 +151,6 @@ func main() {
 			pStringsFormated = append(pStringsFormated, prxURL)
 		}
 	}
-	fmt.Println("cmdCfg.loop:", cmdCfg.loop)
 	if cmdCfg.loop > 1 {
 		var tmpStringsFormated []*url.URL
 		for _ = range cmdCfg.loop {

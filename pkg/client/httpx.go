@@ -1,74 +1,15 @@
-package httpx
+package client
 
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
-	"strings"
 	"time"
 )
-
-type Latency struct {
-	TTFB         int `csv:"ttfb",json:"ttfb""`
-	DNSresolve   int `csv:"dnsResolve",json:"dnsResolve"`
-	Connect      int `csv:"conn",json:"connect"`
-	TLSHandshake int `csv:"tlsHandShake",json:"tlsHandShake"`
-	ProxyResp    int `csv:"proxyResp",json:"proxyResp"`
-}
-
-type PChickError struct {
-	Err error
-}
-
-func (err *PChickError) MarshalCSV() (string, error) {
-	if err.Err == nil {
-		return "", nil
-	}
-	return strings.ReplaceAll(err.Err.Error(), ",", ";"), nil
-}
-
-type Result struct {
-	ProxyURL         string      `csv:"proxy",json:"proxy"`
-	Status           bool        `csv:"result",json:"result"`
-	TargetURL        string      `csv:"-",json:"endpoint"`
-	TargetStatusCode int         `csv:"targetStatusCode",json:"targetStatusCode"`
-	ProxyStatusCode  int         `csv:"proxyStatusCode",json:"proxyStatusCode"`
-	RespBody         string      `csv:"-",json:"-"`
-	ProxyRespHeader  http.Header `csv:"-",json:"-"`
-	Latency          Latency     `csv:"latency",json:"latency"`
-	ProxyServIPAddr  string      `csv:"ProxyServIPAddr",json:"ProxyServIPAddr"`
-	ProxyNodeIPAddr  string      `csv:"ProxyNodeIPAddr",json:"ProxyNodeIPAddr"`
-	Error            PChickError `csv:"error",json:"error"`
-}
-
-// Enrich test Result with metadata and normilise Error text.
-func (res *Result) Enrich(err error) error {
-	res.Error = PChickError{err}
-	if res.ProxyStatusCode != 200 {
-		if val, ok := res.ProxyRespHeader["Reason"]; ok { // SOAX header detected
-			res.Error = PChickError{errors.New("Proxy Error:" + strings.Split(val[0], ";")[0])}
-		}
-		if val, ok := res.ProxyRespHeader["X-Luminati-Error"]; ok { // Luminati header detected
-			res.Error = PChickError{errors.New("Proxy Error:" + val[0])}
-		}
-	}
-	if res.RespBody != "" {
-		if res.TargetURL == "https://www.cloudflare.com/cdn-cgi/trace" {
-			for _, val := range strings.Split(res.RespBody, "\n") {
-				if strings.HasPrefix(val, "ip=") {
-					res.ProxyNodeIPAddr = strings.Split(val, "=")[1]
-				}
-			}
-		} else if res.TargetURL == "https://api.datascrape.tech/latest/ip" {
-			res.ProxyNodeIPAddr = res.RespBody
-		}
-	}
-	return nil
-}
 
 func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBody bool) (res *Result, err error) {
 	var resp *http.Response
@@ -90,9 +31,11 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 			TcpConnStarted = time.Now()
 		},
 		ConnectDone: func(network, addr string, err error) {
-			//fmt.Println("network:", network, "addr:", addr)
-			res.ProxyServIPAddr = strings.Split(addr, ":")[0]
+			resolvedAddr, _ := net.ResolveTCPAddr("tcp", addr)
+			res.ProxyServIPAddr = resolvedAddr.IP.String()
 			res.Latency.Connect = int(time.Since(TcpConnStarted).Milliseconds())
+			//fmt.Println("network:", network, "addr:", addr)
+			//res.ProxyServIPAddr = strings.Split(addr, ":")[0]
 		},
 		TLSHandshakeStart: func() {
 			tlsHandStarted = time.Now()
@@ -129,9 +72,9 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 	if includeRespBody && resp.Body != nil {
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			res.RespBody = "N/A"
+			res.RespPayload = "N/A"
 		} else {
-			res.RespBody = string(b)
+			res.RespPayload = string(b)
 		}
 	}
 	resp.Body.Close()

@@ -1,7 +1,7 @@
 package job
 
 import (
-	"github.com/greggyNapalm/proxychick/pkg/httpx"
+	"github.com/greggyNapalm/proxychick/pkg/client"
 	"log"
 	url "net/url"
 	"slices"
@@ -12,14 +12,15 @@ import (
 type PListEvanJobCfg struct {
 	MaxConcurrency int
 	TargetURL      url.URL
+	TargetAddr     string
 	TimeOut        int
+	Transport      string
+	Debug          bool
 }
 
 func AdaptRawProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {
 	prxChemas := []string{"http", "https", "socks4", "socks4a", "socks5", "socks5h"}
 	sSplited := strings.Split(prxStr, ":")
-	//	fmt.Println("prxStr:", prxStr)
-	//	fmt.Println(sSplited)
 	var prxURLFormated string
 	err = proxyURLFormatError
 
@@ -45,7 +46,7 @@ func AdaptRawProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, er
 	return
 }
 
-func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan httpx.Result) error {
+func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan client.Result) error {
 	chTxConnPool := make(chan struct{}, cfg.MaxConcurrency)
 	for i := 0; i < cfg.MaxConcurrency; i++ {
 		chTxConnPool <- struct{}{}
@@ -54,17 +55,17 @@ func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan httpx.R
 	for _, prxURL := range prxURLs {
 		<-chTxConnPool
 		go func(url url.URL) {
-			res, err := httpx.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, true)
-			res.Enrich(err)
-			//res.Error = httpx.PChickError{err}
-			//if res.ProxyStatusCode != 200 {
-			//	if val, ok := res.ProxyRespHeader["Reason"]; ok { // SOAX header detected
-			//		res.Error = httpx.PChickError{errors.New("Proxy Error:" + strings.Split(val[0], ";")[0])}
-			//	}
-			//	if val, ok := res.ProxyRespHeader["X-Luminati-Error"]; ok { // Luminati header detected
-			//		res.Error = httpx.PChickError{errors.New("Proxy Error:" + val[0])}
-			//	}
-			//}
+			var res *client.Result
+			var err error
+			if cfg.Transport == "tcp" {
+				res, err = client.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, true)
+				res.EnrichHTTP(err)
+			} else if cfg.Transport == "udp" {
+				res, err = client.TestUDPEcho(&cfg.TargetAddr, &url, cfg.TimeOut, true, cfg.Debug)
+				res.EnrichUdpEcho(err)
+			} else {
+				return
+			}
 			if ch != nil {
 				ch <- *res
 			}
