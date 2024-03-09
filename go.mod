@@ -5,6 +5,8 @@ go 1.22.0
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
 	github.com/greggyNapalm/gost v0.0.0-20240224191152-caf40b2a63f0
+	github.com/jedib0t/go-pretty/v6 v6.5.4
+	github.com/montanaflynn/stats v0.7.1
 	github.com/schollz/progressbar/v3 v3.14.1
 )
 
@@ -22,6 +24,7 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/klauspost/reedsolomon v1.12.0 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/mdlayher/vsock v1.2.1 // indirect
 	github.com/miekg/dns v1.1.47 // indirect
