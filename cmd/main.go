@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -114,12 +115,14 @@ func formatResulst(results []*client.Result, format string) (rv string, err erro
 
 	err = errors.New("formatResuls: unsuported result format " + format)
 	if format == "csv" {
-		rv, err = gocsv.MarshalString(&results)
+		rv, err = gocsv.MarshalString(results)
 	}
 	if format == "json" {
+		var jsonDoc []byte
 		//TODO: impl working JSON serialisation
-		fmt.Printf("t1: %T\n", results[0])
-		//rv, err = json.Marshal(results[0])
+		//fmt.Printf("t1: %T\n", results[0])
+		jsonDoc, err = json.Marshal(results)
+		rv = string(jsonDoc)
 	}
 	return
 }
@@ -137,6 +140,7 @@ func main() {
 	var bar *progressbar.ProgressBar
 	var pStringsRaw []string
 	var pStringsFormated []*url.URL
+	statOutputs := []io.Writer{os.Stdout}
 	cmdCfg := NewCmdCfg()
 	pStringsRaw = GetProxyStrings(cmdCfg.inPath)
 	resultsCh := make(chan client.Result, len(pStringsRaw))
@@ -177,6 +181,6 @@ func main() {
 	outTxt, _ := formatResulst(results, "csv")
 	retFinalText(cmdCfg.outPath, outTxt)
 	if cmdCfg.isStatsEnables {
-		stat.ProcTestResults(results)
+		_ = stat.ProcTestResults(results, statOutputs, cmdCfg.transport)
 	}
 }

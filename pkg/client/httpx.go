@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -34,8 +35,6 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 			resolvedAddr, _ := net.ResolveTCPAddr("tcp", addr)
 			res.ProxyServIPAddr = resolvedAddr.IP.String()
 			res.Latency.Connect = int(time.Since(TcpConnStarted).Milliseconds())
-			//fmt.Println("network:", network, "addr:", addr)
-			//res.ProxyServIPAddr = strings.Split(addr, ":")[0]
 		},
 		TLSHandshakeStart: func() {
 			tlsHandStarted = time.Now()
@@ -57,6 +56,7 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 		MaxIdleConns:          0,
 		MaxConnsPerHost:       0,
 		OnProxyConnectResponse: func(_ context.Context, _ *url.URL, connectReq *http.Request, connectRes *http.Response) error {
+			fmt.Println("IN OnProxyConnectResponse", time.Since(AllStarted).Milliseconds())
 			res.Latency.ProxyResp = int(time.Since(AllStarted).Milliseconds())
 			res.ProxyStatusCode = connectRes.StatusCode
 			res.ProxyRespHeader = connectRes.Header
