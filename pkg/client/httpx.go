@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -56,7 +55,7 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 		MaxIdleConns:          0,
 		MaxConnsPerHost:       0,
 		OnProxyConnectResponse: func(_ context.Context, _ *url.URL, connectReq *http.Request, connectRes *http.Response) error {
-			fmt.Println("IN OnProxyConnectResponse", time.Since(AllStarted).Milliseconds())
+			// works only for HTTP Connect proxy(that works only over TCP)
 			res.Latency.ProxyResp = int(time.Since(AllStarted).Milliseconds())
 			res.ProxyStatusCode = connectRes.StatusCode
 			res.ProxyRespHeader = connectRes.Header

@@ -181,12 +181,12 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 			colSucc.add("ok")
 			colErr.add("ok")
 			if trasnport == "tcp" {
-				colTgtStatus.add(strconv.Itoa(r.TargetStatusCode))
-				colPrxStatus.add(strconv.Itoa(r.ProxyStatusCode))
+				// these metrics collection implemented only for TCP and they will eq to 0(zero) in case of error
 				latDNS.vals = append(latDNS.vals, float64(r.Latency.DNSresolve))
 				latConnect.vals = append(latConnect.vals, float64(r.Latency.Connect))
 				latTLS.vals = append(latTLS.vals, float64(r.Latency.TLSHandshake))
 			}
+			// these metrics works for both transport protocols TCP and UDP
 			latTTFB.vals = append(latTTFB.vals, float64(r.Latency.TTFB))
 			latPrxResp.vals = append(latPrxResp.vals, float64(r.Latency.ProxyResp))
 		} else {
@@ -194,11 +194,16 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 			errNorm, _ := r.Error.MarshalCSV()
 			colErr.add(errNorm)
 		}
+		if trasnport == "tcp" {
+			colTgtStatus.add(strconv.Itoa(r.TargetStatusCode))
+			colPrxStatus.add(strconv.Itoa(r.ProxyStatusCode))
+		}
 	}
 	colSucc.printTable()
 	colErr.printTable()
 	if trasnport == "tcp" {
 		colTgtStatus.printTable()
+
 		colPrxStatus.printTable()
 		measurableMetrics = []*ColumnMesurable{latDNS, latTTFB, latConnect, latPrxResp, latTLS}
 	} else {
