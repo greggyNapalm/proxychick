@@ -7,6 +7,7 @@ import (
 	"github.com/montanaflynn/stats"
 	"io"
 	"strconv"
+	"strings"
 )
 
 var defaultPercentiles = []float64{50.0, 75.0, 85.0, 90.0, 95.0, 99.0, 100.0}
@@ -113,10 +114,10 @@ type TableMesurable struct {
 	TableType   string             `json:"TableType"`
 	Headers     table.Row          `json:"headers"`
 	Rows        []*ColumnMesurable `json:"rows"`
-	outputs     []io.Writer
-	Percentiles []float64
-	percentiles map[string]float64
-	Metrics     []*ColumnMesurable
+	outputs     []io.Writer        `json:"-"`
+	Percentiles []float64          `json:"-"`
+	percentiles map[string]float64 `json:"percentiles"`
+	Metrics     []*ColumnMesurable `json:"-"`
 }
 
 func NewTableMesurable(tblName string, outputs []io.Writer, metrics []*ColumnMesurable) *TableMesurable {
@@ -164,8 +165,10 @@ func (self *TableMesurable) printTable() {
 }
 
 func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport string) []ProxyChickStatTable {
+	rv := []ProxyChickStatTable{}
 	var colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency ProxyChickStatTable
 	var measurableMetrics []*ColumnMesurable
+	var containsHTTPscheme = false
 	colSucc = NewTableCountable("Success Rate", outputs)
 	colErr = NewTableCountable("Errors", outputs)
 	colTgtStatus = NewTableCountable("Taget HTTP status codes", outputs)
@@ -177,6 +180,9 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	latPrxResp := NewColumnMesurable("ProxyResp")
 	latTLS := NewColumnMesurable("TLSHandshake")
 	for _, r := range results {
+		if strings.HasPrefix(r.ProxyURL, "http") {
+			containsHTTPscheme = true
+		}
 		if r.Status {
 			colSucc.add("ok")
 			colErr.add("ok")
@@ -201,17 +207,24 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	}
 	colSucc.printTable()
 	colErr.printTable()
+	rv = append(rv, colSucc, colErr)
+	measurableMetrics = []*ColumnMesurable{latTTFB}
 	if trasnport == "tcp" {
+		measurableMetrics = append(measurableMetrics, latDNS, latConnect, latTLS)
 		colTgtStatus.printTable()
-
-		colPrxStatus.printTable()
-		measurableMetrics = []*ColumnMesurable{latDNS, latTTFB, latConnect, latPrxResp, latTLS}
-	} else {
-		measurableMetrics = []*ColumnMesurable{latPrxResp, latTTFB}
+		rv = append(rv, colTgtStatus)
+		if containsHTTPscheme {
+			colPrxStatus.printTable()
+			rv = append(rv, colPrxStatus)
+			measurableMetrics = append(measurableMetrics, latPrxResp)
+		}
+	}
+	if trasnport == "udp" {
+		measurableMetrics = append(measurableMetrics, latPrxResp)
 	}
 	tblLatency = NewTableMesurable("Latency", outputs, measurableMetrics)
 	tblLatency.printTable()
-	return []ProxyChickStatTable{colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency}
-	//jsonDoc, _ := json.MarshalIndent([]ProxyChickStatTable{colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency}, "", "    ")
-	//fmt.Println(string(jsonDoc))
+	rv = append(rv, tblLatency)
+	//return []ProxyChickStatTable{colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency}
+	return rv
 }
