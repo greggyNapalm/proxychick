@@ -52,6 +52,8 @@ func (res *Result) MarshalJSON() ([]byte, error) {
 		TargetStatusCode int     `json:"targetStatusCode"`
 		ProxyStatusCode  int     `json:"proxyStatusCode"`
 		Latency          Latency `json:"latency"`
+		ProxyServIPAddr  string  `json:"ProxyServIPAddr"`
+		ProxyNodeIPAddr  string  `json:"ProxyNodeIPAddr"`
 		Error            string  `json:"error"`
 	}{
 		res.ProxyURL,
@@ -59,6 +61,8 @@ func (res *Result) MarshalJSON() ([]byte, error) {
 		res.TargetStatusCode,
 		res.ProxyStatusCode,
 		res.Latency,
+		res.ProxyServIPAddr,
+		res.ProxyNodeIPAddr,
 		errStr,
 	})
 }

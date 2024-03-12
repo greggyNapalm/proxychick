@@ -40,7 +40,7 @@ func NewTableCountable(tblName string, outputs []io.Writer) *TableCountable {
 	var c TableCountable
 	c.Name = tblName
 	c.TableType = "countable"
-	c.Headers = table.Row{"Value", "Count", "Percent"}
+	c.Headers = table.Row{"value", "count", "percent"}
 	c.outputs = outputs
 	c.DistinctCntr = make(map[string]int)
 	return &c
