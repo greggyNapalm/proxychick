@@ -125,10 +125,10 @@ func NewTableMesurable(tblName string, outputs []io.Writer, metrics []*ColumnMes
 	c.Name = tblName
 	c.TableType = "mesurable"
 	c.Percentiles = defaultPercentiles
-	header := table.Row{"Name"}
+	header := table.Row{"name"}
 	for _, pVal := range c.Percentiles {
 		pName := fmt.Sprintf("%.0f", pVal)
-		header = append(header, pName+"%p")
+		header = append(header, pName)
 	}
 	c.Headers = header
 	c.outputs = outputs
