@@ -15,23 +15,33 @@ go get github.com/greggyNapalm/proxychick
 
 ## Usage
 
+The how-to is available on [blog](https://datascrape.tech/blog/proxychick)
 ```bash
 $ go run cmd/main.go -h
-   -c int
+  -c int
     	number of simultaneous HTTP requests(maxConcurrency) (default 300)
   -i string
     	path to the proxylist file or STDIN (default "proxylist.txt")
   -loop int
     	Loop over proxylist content N times (default 1)
+  -noProgresBar
+    	Disable the progress meter
+  -noStat
+    	Disable stats output
   -o string
     	path to the results file (default "STDOUT")
   -p string
     	Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h (default "http")
-  -s	Disable the progress meter
   -t string
-    	Target URL (default "https://api.datascrape.tech/latest/ip")
+    	Target URL(TCP) and HOST:PORT(UDP) (default "https://api.datascrape.tech/latest/ip")
   -to int
     	Timeout for entire HTTP request in seconds (default 10)
+  -transport string
+    	Transport protocol for interaction with the target. Will be incapsulated into proxy protocol. (default "tcp")
+  -verbose
+    	Enables debug logs
+  -version
+    	Show version and exit
 ```
 
 ## Results
