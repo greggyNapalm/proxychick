@@ -10,7 +10,7 @@ import (
 type Latency struct {
 	TTFB         int `csv:"ttfb",json:"ttfb""`
 	DNSresolve   int `csv:"dnsResolve",json:"dnsResolve"`
-	Connect      int `csv:"conn",json:"connect"`
+	Connect      int `csv:"conn",json:"conn"`
 	TLSHandshake int `csv:"tlsHandShake",json:"tlsHandShake"`
 	ProxyResp    int `csv:"proxyResp",json:"proxyResp"`
 }
@@ -33,7 +33,7 @@ func (err *PChickError) MarshalCSV() (string, error) {
 type Result struct {
 	ProxyURL         string      `csv:"proxy",json:"proxy"`
 	Status           bool        `csv:"result",json:"result"`
-	TargetURL        string      `csv:"-",json:"endpoint"`
+	TargetURL        string      `csv:"-",json:"-"`
 	TargetStatusCode int         `csv:"targetStatusCode",json:"targetStatusCode"`
 	ProxyStatusCode  int         `csv:"proxyStatusCode",json:"proxyStatusCode"`
 	RespPayload      string      `csv:"-",json:"-"`
@@ -42,6 +42,29 @@ type Result struct {
 	ProxyServIPAddr  string      `csv:"ProxyServIPAddr",json:"ProxyServIPAddr"`
 	ProxyNodeIPAddr  string      `csv:"ProxyNodeIPAddr",json:"ProxyNodeIPAddr"`
 	Error            PChickError `csv:"error",json:"error"`
+}
+
+func (res *Result) MarshalJSON() ([]byte, error) {
+	errStr, _ := res.Error.MarshalCSV()
+	return json.Marshal(struct {
+		ProxyURL         string  `json:"proxy"`
+		Status           bool    `json:"result"`
+		TargetStatusCode int     `json:"targetStatusCode"`
+		ProxyStatusCode  int     `json:"proxyStatusCode"`
+		Latency          Latency `json:"latency"`
+		ProxyServIPAddr  string  `json:"ProxyServIPAddr"`
+		ProxyNodeIPAddr  string  `json:"ProxyNodeIPAddr"`
+		Error            string  `json:"error"`
+	}{
+		res.ProxyURL,
+		res.Status,
+		res.TargetStatusCode,
+		res.ProxyStatusCode,
+		res.Latency,
+		res.ProxyServIPAddr,
+		res.ProxyNodeIPAddr,
+		errStr,
+	})
 }
 
 // Enrich test Result with metadata and normilise Error text.
@@ -70,6 +93,7 @@ func (res *Result) EnrichHTTP(err error) error {
 }
 
 func (res *Result) EnrichUdpEcho(err error) error {
+	res.Error = PChickError{err}
 	if res.RespPayload != "" {
 		if err != nil {
 			panic(err)

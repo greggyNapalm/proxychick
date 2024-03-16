@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"github.com/greggyNapalm/gost"
 	"net"
@@ -11,6 +12,7 @@ import (
 
 func TestUDPEcho(targetAddr *string, proxyURL *url.URL, timeOut int, includeRespPayload bool, debug bool) (res *Result, err error) {
 	res = &Result{}
+	err = errors.New("proxycheck: Failed to establish TCP connetion to Proxy server")
 	res.ProxyURL = proxyURL.String()
 	res.TargetURL = *targetAddr
 	res.Status = false
@@ -21,7 +23,7 @@ func TestUDPEcho(targetAddr *string, proxyURL *url.URL, timeOut int, includeResp
 	AllStarted := time.Now()
 	conn, err := client.Dial(proxyURL.Host, gost.TimeoutDialOption(time.Duration(timeOut)*time.Second))
 	if err != nil {
-		return
+		return res, errors.New("c2p transport: Failed to establish TCP connetion to Proxy server")
 	}
 	res.Latency.ProxyResp = int(time.Since(AllStarted).Milliseconds())
 	addr, _ := net.ResolveTCPAddr("tcp", conn.RemoteAddr().String())
@@ -30,7 +32,7 @@ func TestUDPEcho(targetAddr *string, proxyURL *url.URL, timeOut int, includeResp
 
 	udpConn, err := client.Connect(conn, *targetAddr, gost.TimeoutConnectOption(time.Duration(timeOut)*time.Second))
 	if err != nil {
-		return
+		return res, errors.New("c2t transport: Failed to establish UDP connection")
 	}
 	udpConn.SetDeadline(time.Now().Add(time.Duration(timeOut) * time.Second))
 	defer udpConn.Close()
@@ -38,7 +40,7 @@ func TestUDPEcho(targetAddr *string, proxyURL *url.URL, timeOut int, includeResp
 	resp := make([]byte, 1024)
 	n, err := bufio.NewReader(udpConn).Read(resp)
 	if err != nil {
-		return
+		return res, errors.New("c2t transport: Failed to read from UDP socket")
 	}
 	// It's TimeToLastByte, but they fits in one datagram, so it good enough for the test.
 	res.Latency.TTFB = int(time.Since(AllStarted).Milliseconds())
