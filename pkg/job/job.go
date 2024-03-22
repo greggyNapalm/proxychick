@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PListEvanJobCfg struct {
@@ -16,6 +17,10 @@ type PListEvanJobCfg struct {
 	TimeOut        int
 	Transport      string
 	Debug          bool
+}
+type JobMetrics struct {
+	Duration             time.Duration `json:"Duration"`
+	UniqueExitNodesIPCnt int           `json:"UniqueExitNodesIPCnt"`
 }
 
 func AdaptRawProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {
@@ -61,7 +66,7 @@ func EvaluateProxyList(prxURLs []*url.URL, cfg *PListEvanJobCfg, ch chan client.
 				res, err = client.TestHTTP(&cfg.TargetURL, &url, cfg.TimeOut, true)
 				res.EnrichHTTP(err)
 			} else if cfg.Transport == "udp" {
-				res, err = client.TestUDPEcho(&cfg.TargetAddr, &url, cfg.TimeOut, true, cfg.Debug)
+				res, err = client.TestUDPEcho(&cfg.TargetURL, &url, cfg.TimeOut, true, cfg.Debug)
 				res.EnrichUdpEcho(err)
 			} else {
 				return

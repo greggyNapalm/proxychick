@@ -5,7 +5,9 @@ import (
 	"github.com/greggyNapalm/proxychick/pkg/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/montanaflynn/stats"
+	"github.com/oschwald/geoip2-golang"
 	"io"
+	"net"
 	"strconv"
 	"strings"
 )
@@ -72,7 +74,7 @@ func (self *TableCountable) createTable() table.Writer {
 		self.Rows = append(self.Rows, &TableCountableRow{colName, colCnt, self.DistinctPerc[colName]})
 	}
 	t.SortBy([]table.SortBy{
-		{Name: "Count", Mode: table.Dsc},
+		{Name: "count", Mode: table.DscNumeric},
 	})
 	return t
 }
@@ -164,6 +166,11 @@ func (self *TableMesurable) printTable() {
 	}
 }
 
+type IPGeo struct {
+	CountryName string
+	CountryISO  string
+}
+
 func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport string) []ProxyChickStatTable {
 	rv := []ProxyChickStatTable{}
 	var colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency ProxyChickStatTable
@@ -180,7 +187,7 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	latPrxResp := NewColumnMesurable("ProxyResp")
 	latTLS := NewColumnMesurable("TLSHandshake")
 	for _, r := range results {
-		if strings.HasPrefix(r.ProxyURL, "http") {
+		if strings.HasPrefix(r.ProxyURL.String(), "http") {
 			containsHTTPscheme = true
 		}
 		if r.Status {
@@ -227,4 +234,32 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	rv = append(rv, tblLatency)
 	//return []ProxyChickStatTable{colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency}
 	return rv
+}
+
+func getCountyByIp(ipAddr net.IP, db geoip2.Reader) (IPGeo, error) {
+	record, err := db.Country(ipAddr)
+	//fmt.Println("record", record)
+	if err != nil {
+		return IPGeo{}, err
+	}
+	return IPGeo{record.Country.Names["en"], record.Country.IsoCode}, nil
+}
+
+func ProcIPTestResults(results []*client.Result, outputs []io.Writer, db geoip2.Reader) ([]ProxyChickStatTable, int) {
+	countIPCountryTbl := NewTableCountable("Exit nodes country", outputs)
+	uniqueIP := map[string]bool{}
+	for _, r := range results {
+		uniqueIP[r.ProxyNodeIPAddr.String()] = true
+		geo, err := getCountyByIp(r.ProxyNodeIPAddr, db)
+		//fmt.Println(geo, err)
+		if err == nil {
+			//fmt.Println("---")
+			//fmt.Println(fmt.Sprintf("%s - %s", geo.CountryISO, geo.CountryName))
+			//fmt.Println("---")
+			countIPCountryTbl.add(fmt.Sprintf("%s - %s", geo.CountryISO, geo.CountryName))
+		}
+	}
+	countIPCountryTbl.printTable()
+	//fmt.Println(countIPCountryTbl)
+	return []ProxyChickStatTable{countIPCountryTbl}, len(uniqueIP)
 }

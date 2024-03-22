@@ -10,6 +10,7 @@ import (
 	"github.com/greggyNapalm/proxychick/pkg/job"
 	"github.com/greggyNapalm/proxychick/pkg/stat"
 	"github.com/greggyNapalm/proxychick/pkg/utils"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var (
@@ -39,11 +41,12 @@ type CmdCfg struct {
 	timeOut             int
 	loop                int
 	transport           string
+	countryMmdbPath     string
 }
 
 func NewCmdCfg() CmdCfg {
 	defaultTCPTarget := "https://api.datascrape.tech/latest/ip"
-	defaultUDPTarget := "api.datascrape.tech:80"
+	defaultUDPTarget := "udp://api.datascrape.tech:80"
 	var rv = CmdCfg{}
 	flag.IntVar(&rv.maxConcurrency, "c", 300, "number of simultaneous HTTP requests(maxConcurrency)")
 	flag.StringVar(&rv.inPath, "i", "proxylist.txt", "path to the proxylist file or STDIN")
@@ -57,6 +60,7 @@ func NewCmdCfg() CmdCfg {
 	var targetAddr = flag.String("t", defaultTCPTarget, "Target URL(TCP) and HOST:PORT(UDP)")
 	var showVersion = flag.Bool("version", false, "Show version and exit")
 	var debugCmd = flag.Bool("verbose", false, "Enables debug logs")
+	flag.StringVar(&rv.countryMmdbPath, "countryMmdb", "", "Path to GeoLite2-Country.mmdb")
 	flag.Parse()
 
 	rv.isPorgresBarEnabled = !(*pBarDisabled)
@@ -77,14 +81,31 @@ func NewCmdCfg() CmdCfg {
 		}
 		rv.targetURL = targetURL
 	} else if rv.transport == "udp" {
-		rv.targetURL = &url.URL{}
+		//rv.targetURL = &url.URL{}
 		if *targetAddr == defaultTCPTarget {
 			rv.targetAddr = defaultUDPTarget
 		} else {
 			rv.targetAddr = *targetAddr
 		}
+		targetURL, err := url.Parse(rv.targetAddr)
+		if err != nil {
+			log.Fatal("Can't parse Target URL:" + rv.targetAddr)
+			panic(err)
+		}
+		rv.targetURL = targetURL
 	}
-
+	if rv.countryMmdbPath == "" {
+		countryMmdbPathEnv := os.Getenv("PROXYCHICK_MMDB_COUNTRY")
+		if countryMmdbPathEnv != "" {
+			rv.countryMmdbPath = countryMmdbPathEnv
+		}
+	}
+	if rv.countryMmdbPath != "" {
+		_, err := geoip2.Open(rv.countryMmdbPath)
+		if err != nil {
+			log.Fatal("Failed to open GeoLite2-Country.mmdb - ", err)
+		}
+	}
 	return rv
 }
 
@@ -136,6 +157,7 @@ func retFinalText(outPath string, txt string) {
 }
 
 func main() {
+	jobMetrics := job.JobMetrics{}
 	var results []*client.Result
 	var bar *progressbar.ProgressBar
 	var pStringsRaw []string
@@ -167,6 +189,7 @@ func main() {
 		}
 		pStringsFormated = tmpStringsFormated
 	}
+	JobStarted := time.Now()
 	go job.EvaluateProxyList(pStringsFormated, &jobCfg, resultsCh)
 	if cmdCfg.isPorgresBarEnabled {
 		bar = progressbar.Default(int64(len(pStringsFormated)))
@@ -178,9 +201,18 @@ func main() {
 			bar.Add(1)
 		}
 	}
+	jobMetrics.Duration = time.Since(JobStarted)
 	outTxt, _ := formatResulst(results, "csv")
 	retFinalText(cmdCfg.outPath, outTxt)
 	if cmdCfg.isStatsEnables {
 		_ = stat.ProcTestResults(results, statOutputs, cmdCfg.transport)
+		if cmdCfg.countryMmdbPath != "" {
+			db, err := geoip2.Open(cmdCfg.countryMmdbPath)
+			if err == nil {
+				_, jobMetrics.UniqueExitNodesIPCnt = stat.ProcIPTestResults(results, statOutputs, *db)
+				fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))
+				fmt.Println("Unique Exit Nodes IPs:", jobMetrics.UniqueExitNodesIPCnt)
+			}
+		}
 	}
 }

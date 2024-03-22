@@ -3,7 +3,9 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -30,30 +32,38 @@ func (err *PChickError) MarshalCSV() (string, error) {
 	return strings.ReplaceAll(err.Err.Error(), ",", ";"), nil
 }
 
+type URL struct {
+	url.URL
+}
+
+func (u URL) MarshalCSV() (string, error) {
+	return u.String(), nil
+}
+
 type Result struct {
-	ProxyURL         string      `csv:"proxy",json:"proxy"`
+	ProxyURL         URL         `csv:"proxy",json:"proxy"`
 	Status           bool        `csv:"result",json:"result"`
-	TargetURL        string      `csv:"-",json:"-"`
+	TargetURL        url.URL     `csv:"-",json:"-"`
 	TargetStatusCode int         `csv:"targetStatusCode",json:"targetStatusCode"`
 	ProxyStatusCode  int         `csv:"proxyStatusCode",json:"proxyStatusCode"`
 	RespPayload      string      `csv:"-",json:"-"`
 	ProxyRespHeader  http.Header `csv:"-",json:"-"`
 	Latency          Latency     `csv:"latency",json:"latency"`
-	ProxyServIPAddr  string      `csv:"ProxyServIPAddr",json:"ProxyServIPAddr"`
-	ProxyNodeIPAddr  string      `csv:"ProxyNodeIPAddr",json:"ProxyNodeIPAddr"`
+	ProxyServIPAddr  net.IP      `csv:"ProxyServIPAddr",json:"ProxyServIPAddr"`
+	ProxyNodeIPAddr  net.IP      `csv:"ProxyNodeIPAddr",json:"ProxyNodeIPAddr"`
 	Error            PChickError `csv:"error",json:"error"`
 }
 
 func (res *Result) MarshalJSON() ([]byte, error) {
 	errStr, _ := res.Error.MarshalCSV()
 	return json.Marshal(struct {
-		ProxyURL         string  `json:"proxy"`
+		ProxyURL         URL     `json:"proxy"`
 		Status           bool    `json:"result"`
 		TargetStatusCode int     `json:"targetStatusCode"`
 		ProxyStatusCode  int     `json:"proxyStatusCode"`
 		Latency          Latency `json:"latency"`
-		ProxyServIPAddr  string  `json:"ProxyServIPAddr"`
-		ProxyNodeIPAddr  string  `json:"ProxyNodeIPAddr"`
+		ProxyServIPAddr  net.IP  `json:"ProxyServIPAddr"`
+		ProxyNodeIPAddr  net.IP  `json:"ProxyNodeIPAddr"`
 		Error            string  `json:"error"`
 	}{
 		res.ProxyURL,
@@ -79,14 +89,14 @@ func (res *Result) EnrichHTTP(err error) error {
 		}
 	}
 	if res.RespPayload != "" {
-		if res.TargetURL == "https://www.cloudflare.com/cdn-cgi/trace" {
+		if res.TargetURL.String() == "https://www.cloudflare.com/cdn-cgi/trace" {
 			for _, val := range strings.Split(res.RespPayload, "\n") {
 				if strings.HasPrefix(val, "ip=") {
-					res.ProxyNodeIPAddr = strings.Split(val, "=")[1]
+					res.ProxyNodeIPAddr = net.ParseIP(strings.Split(val, "=")[1])
 				}
 			}
-		} else if res.TargetURL == "https://api.datascrape.tech/latest/ip" {
-			res.ProxyNodeIPAddr = res.RespPayload
+		} else if res.TargetURL.String() == "https://api.datascrape.tech/latest/ip" {
+			res.ProxyNodeIPAddr = net.ParseIP(res.RespPayload)
 		}
 	}
 	return nil
@@ -99,10 +109,10 @@ func (res *Result) EnrichUdpEcho(err error) error {
 			panic(err)
 		}
 		//TODO: It might be better to rewrite using DNS lookup instead hardocded ip_addr
-		if res.TargetURL == "api.datascrape.tech:80" || res.TargetURL == "194.76.46.8:80" {
+		if res.TargetURL.Host == "api.datascrape.tech:80" || res.TargetURL.Host == "194.76.46.8:80" {
 			payload := map[string]string{}
 			json.Unmarshal([]byte(res.RespPayload), &payload)
-			res.ProxyNodeIPAddr = payload["clent_ip_addr"]
+			res.ProxyNodeIPAddr = net.ParseIP(payload["clent_ip_addr"])
 		}
 	}
 	return nil

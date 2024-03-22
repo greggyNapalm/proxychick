@@ -15,8 +15,8 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 	var resp *http.Response
 	var AllStarted, DNSStarted, TcpConnStarted, tlsHandStarted time.Time
 	res = &Result{}
-	res.ProxyURL = proxyURL.String()
-	res.TargetURL = targetURL.String()
+	res.ProxyURL = URL{*proxyURL}
+	res.TargetURL = *targetURL
 	res.Status = false
 
 	req, _ := http.NewRequest("GET", targetURL.String(), nil)
@@ -32,7 +32,7 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 		},
 		ConnectDone: func(network, addr string, err error) {
 			resolvedAddr, _ := net.ResolveTCPAddr("tcp", addr)
-			res.ProxyServIPAddr = resolvedAddr.IP.String()
+			res.ProxyServIPAddr = resolvedAddr.IP
 			res.Latency.Connect = int(time.Since(TcpConnStarted).Milliseconds())
 		},
 		TLSHandshakeStart: func() {
