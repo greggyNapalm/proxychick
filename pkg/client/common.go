@@ -39,9 +39,12 @@ type URL struct {
 func (u URL) MarshalCSV() (string, error) {
 	return u.String(), nil
 }
+func (u URL) MarshalJSON() (string, error) {
+	return u.String(), nil
+}
 
 type Result struct {
-	ProxyURL         URL         `csv:"proxy",json:"proxy"`
+	ProxyURL         URL         `csv:"proxy",json:"proxy,string"`
 	Status           bool        `csv:"result",json:"result"`
 	TargetURL        url.URL     `csv:"-",json:"-"`
 	TargetStatusCode int         `csv:"targetStatusCode",json:"targetStatusCode"`
@@ -57,7 +60,7 @@ type Result struct {
 func (res *Result) MarshalJSON() ([]byte, error) {
 	errStr, _ := res.Error.MarshalCSV()
 	return json.Marshal(struct {
-		ProxyURL         URL     `json:"proxy"`
+		ProxyURL         string  `json:"proxy"`
 		Status           bool    `json:"result"`
 		TargetStatusCode int     `json:"targetStatusCode"`
 		ProxyStatusCode  int     `json:"proxyStatusCode"`
@@ -66,7 +69,7 @@ func (res *Result) MarshalJSON() ([]byte, error) {
 		ProxyNodeIPAddr  net.IP  `json:"ProxyNodeIPAddr"`
 		Error            string  `json:"error"`
 	}{
-		res.ProxyURL,
+		res.ProxyURL.String(),
 		res.Status,
 		res.TargetStatusCode,
 		res.ProxyStatusCode,

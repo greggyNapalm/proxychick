@@ -1,6 +1,7 @@
 package job
 
 import (
+	"encoding/json"
 	"github.com/greggyNapalm/proxychick/pkg/client"
 	"log"
 	url "net/url"
@@ -11,16 +12,40 @@ import (
 )
 
 type PListEvanJobCfg struct {
-	MaxConcurrency int
-	TargetURL      url.URL
-	TargetAddr     string
-	TimeOut        int
-	Transport      string
-	Debug          bool
+	MaxConcurrency int           `json:"MaxConcurrency"`
+	TargetURL      url.URL       `json:"TargetURL"`
+	TimeOut        time.Duration `json:"TimeOut"`
+	Transport      string        `json:"Transport"`
+	Debug          bool          `json:"-"`
 }
+
+func (self PListEvanJobCfg) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		MaxConcurrency int    `json:"MaxConcurrency"`
+		TargetURL      string `json:"TargetURL"`
+		TimeOut        int    `json:"TimeOut"`
+		Transport      string `json:"Transport"`
+	}{
+		self.MaxConcurrency,
+		self.TargetURL.String(),
+		int(self.TimeOut / time.Millisecond),
+		self.Transport,
+	})
+}
+
 type JobMetrics struct {
 	Duration             time.Duration `json:"Duration"`
 	UniqueExitNodesIPCnt int           `json:"UniqueExitNodesIPCnt"`
+}
+
+func (self JobMetrics) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Duration             int `json:"Duration"`
+		UniqueExitNodesIPCnt int `json:"UniqueExitNodesIPCnt"`
+	}{
+		int(self.Duration / time.Millisecond),
+		self.UniqueExitNodesIPCnt,
+	})
 }
 
 func AdaptRawProxyStr(prxStr string, prxProtocol string) (parsedURL *url.URL, err error) {

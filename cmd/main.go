@@ -38,7 +38,7 @@ type CmdCfg struct {
 	isPorgresBarEnabled bool
 	isStatsEnables      bool
 	prxProto            string
-	timeOut             int
+	timeOut             time.Duration
 	loop                int
 	transport           string
 	countryMmdbPath     string
@@ -48,11 +48,12 @@ func NewCmdCfg() CmdCfg {
 	defaultTCPTarget := "https://api.datascrape.tech/latest/ip"
 	defaultUDPTarget := "udp://api.datascrape.tech:80"
 	var rv = CmdCfg{}
+	var err error
 	flag.IntVar(&rv.maxConcurrency, "c", 300, "number of simultaneous HTTP requests(maxConcurrency)")
 	flag.StringVar(&rv.inPath, "i", "proxylist.txt", "path to the proxylist file or STDIN")
 	flag.StringVar(&rv.outPath, "o", "STDOUT", "path to the results file")
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h")
-	flag.IntVar(&rv.timeOut, "to", 10, "Timeout for entire HTTP request in seconds")
+	var timeOut = flag.String("to", "10s", "Timeout for entire request")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
 	flag.StringVar(&rv.transport, "transport", "tcp", "Transport protocol for interaction with the target. Will be incapsulated into proxy protocol.")
 	var pBarDisabled = flag.Bool("noProgresBar", false, "Disable the progress meter")
@@ -63,6 +64,10 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.countryMmdbPath, "countryMmdb", "", "Path to GeoLite2-Country.mmdb")
 	flag.Parse()
 
+	rv.timeOut, err = time.ParseDuration(*timeOut)
+	if err != nil {
+		log.Fatal("Can't parse timeout(to) cmd param:" + err.Error())
+	}
 	rv.isPorgresBarEnabled = !(*pBarDisabled)
 	rv.isStatsEnables = !(*statDisabled)
 	var debugEnv = os.Getenv("PROXYCHICK_DEBUG")
@@ -169,7 +174,6 @@ func main() {
 	jobCfg := job.PListEvanJobCfg{
 		cmdCfg.maxConcurrency,
 		*cmdCfg.targetURL,
-		cmdCfg.targetAddr,
 		cmdCfg.timeOut,
 		cmdCfg.transport,
 		debug,
@@ -208,6 +212,7 @@ func main() {
 		_ = stat.ProcTestResults(results, statOutputs, cmdCfg.transport)
 		if cmdCfg.countryMmdbPath != "" {
 			db, err := geoip2.Open(cmdCfg.countryMmdbPath)
+			defer db.Close()
 			if err == nil {
 				_, jobMetrics.UniqueExitNodesIPCnt = stat.ProcIPTestResults(results, statOutputs, *db)
 				fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))

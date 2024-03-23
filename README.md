@@ -20,6 +20,8 @@ The how-to is available on [blog](https://datascrape.tech/blog/proxychick)
 $ go run cmd/main.go -h
   -c int
     	number of simultaneous HTTP requests(maxConcurrency) (default 300)
+  -countryMmdb string
+    	Path to GeoLite2-Country.mmdb. You can use PROXYCHICK_MMDB_COUNTRY env var as well
   -i string
     	path to the proxylist file or STDIN (default "proxylist.txt")
   -loop int
@@ -34,8 +36,8 @@ $ go run cmd/main.go -h
     	Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h (default "http")
   -t string
     	Target URL(TCP) and HOST:PORT(UDP) (default "https://api.datascrape.tech/latest/ip")
-  -to int
-    	Timeout for entire HTTP request in seconds (default 10)
+  -to string
+    	Timeout for entire request (default "10s")
   -transport string
     	Transport protocol for interaction with the target. Will be incapsulated into proxy protocol. (default "tcp")
   -verbose

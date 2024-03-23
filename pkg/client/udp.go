@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestUDPEcho(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespPayload bool, debug bool) (res *Result, err error) {
+func TestUDPEcho(targetURL *url.URL, proxyURL *url.URL, timeOut time.Duration, includeRespPayload bool, debug bool) (res *Result, err error) {
 	res = &Result{}
 	err = errors.New("proxycheck: Failed to establish TCP connetion to Proxy server")
 	res.ProxyURL = URL{*proxyURL}
@@ -30,11 +30,11 @@ func TestUDPEcho(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeResp
 	res.ProxyServIPAddr = addr.IP
 	defer conn.Close()
 
-	udpConn, err := client.Connect(conn, targetURL.Host, gost.TimeoutConnectOption(time.Duration(timeOut)*time.Second))
+	udpConn, err := client.Connect(conn, targetURL.Host, gost.TimeoutConnectOption(timeOut))
 	if err != nil {
 		return res, errors.New("c2t transport: Failed to establish UDP connection")
 	}
-	udpConn.SetDeadline(time.Now().Add(time.Duration(timeOut) * time.Second))
+	udpConn.SetDeadline(time.Now().Add(timeOut))
 	defer udpConn.Close()
 	udpConn.Write([]byte("Hello from ProxyChick"))
 	resp := make([]byte, 1024)

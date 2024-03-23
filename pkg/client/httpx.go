@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBody bool) (res *Result, err error) {
+func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut time.Duration, includeRespBody bool) (res *Result, err error) {
 	var resp *http.Response
 	var AllStarted, DNSStarted, TcpConnStarted, tlsHandStarted time.Time
 	res = &Result{}
@@ -48,9 +48,9 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut int, includeRespBod
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), clientTrace))
 	transport := http.Transport{
 		Proxy:                 http.ProxyURL(proxyURL),
-		TLSHandshakeTimeout:   time.Duration(timeOut) * time.Second,
-		ResponseHeaderTimeout: time.Duration(timeOut) * time.Second,
-		ExpectContinueTimeout: time.Duration(timeOut) * time.Second,
+		TLSHandshakeTimeout:   timeOut,
+		ResponseHeaderTimeout: timeOut,
+		ExpectContinueTimeout: timeOut,
 		DisableKeepAlives:     true,
 		MaxIdleConns:          0,
 		MaxConnsPerHost:       0,
