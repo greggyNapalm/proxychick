@@ -86,12 +86,12 @@ func NewCmdCfg() CmdCfg {
 		}
 		rv.targetURL = targetURL
 	} else if rv.transport == "udp" {
-		//rv.targetURL = &url.URL{}
 		if *targetAddr == defaultTCPTarget {
 			rv.targetAddr = defaultUDPTarget
 		} else {
 			rv.targetAddr = *targetAddr
 		}
+		rv.prxProto = "socks5"
 		targetURL, err := url.Parse(rv.targetAddr)
 		if err != nil {
 			log.Fatal("Can't parse Target URL:" + rv.targetAddr)
