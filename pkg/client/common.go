@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type Latency struct {
@@ -55,6 +56,7 @@ type Result struct {
 	ProxyServIPAddr  net.IP      `csv:"ProxyServIPAddr",json:"ProxyServIPAddr"`
 	ProxyNodeIPAddr  net.IP      `csv:"ProxyNodeIPAddr",json:"ProxyNodeIPAddr"`
 	Error            PChickError `csv:"error",json:"error"`
+	Ts               time.Time   `csv:"-",json:"ts"`
 }
 
 func (res *Result) MarshalJSON() ([]byte, error) {
@@ -68,6 +70,7 @@ func (res *Result) MarshalJSON() ([]byte, error) {
 		ProxyServIPAddr  net.IP  `json:"ProxyServIPAddr"`
 		ProxyNodeIPAddr  net.IP  `json:"ProxyNodeIPAddr"`
 		Error            string  `json:"error"`
+		Ts               int64   `json:"ts"`
 	}{
 		res.ProxyURL.String(),
 		res.Status,
@@ -77,6 +80,7 @@ func (res *Result) MarshalJSON() ([]byte, error) {
 		res.ProxyServIPAddr,
 		res.ProxyNodeIPAddr,
 		errStr,
+		res.Ts.Unix(),
 	})
 }
 

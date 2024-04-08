@@ -12,9 +12,10 @@ import (
 )
 
 func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut time.Duration, includeRespBody bool) (res *Result, err error) {
+	res = &Result{}
+	res.Ts = time.Now()
 	var resp *http.Response
 	var AllStarted, DNSStarted, TcpConnStarted, tlsHandStarted time.Time
-	res = &Result{}
 	res.ProxyURL = URL{*proxyURL}
 	res.TargetURL = *targetURL
 	res.Status = false

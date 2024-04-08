@@ -12,6 +12,7 @@ import (
 
 func TestUDPEcho(targetURL *url.URL, proxyURL *url.URL, timeOut time.Duration, includeRespPayload bool, debug bool) (res *Result, err error) {
 	res = &Result{}
+	res.Ts = time.Now()
 	err = errors.New("proxycheck: Failed to establish TCP connetion to Proxy server")
 	res.ProxyURL = URL{*proxyURL}
 	res.TargetURL = *targetURL
