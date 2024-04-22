@@ -13,7 +13,6 @@ import (
 	"github.com/oschwald/geoip2-golang"
 	"github.com/schollz/progressbar/v3"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -121,14 +120,14 @@ func GetProxyStrings(inPath string) []string {
 	if inPath == "STDIN" {
 		bytes, err = io.ReadAll(os.Stdin)
 	} else {
-		bytes, err = ioutil.ReadFile(inPath)
+		bytes, err = os.ReadFile(inPath)
 	}
 	if err != nil {
 		log.Fatal("Can't read file:" + inPath)
 	}
 	for _, el := range strings.Split(string(bytes), "\n") {
 		if el != "" {
-			rv = append(rv, el)
+			rv = append(rv, strings.Replace(el, "\r", "", -1))
 		}
 	}
 	return rv
