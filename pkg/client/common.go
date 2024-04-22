@@ -104,6 +104,9 @@ func (res *Result) EnrichHTTP(err error) error {
 			}
 		} else if res.TargetURL.String() == "https://api.datascrape.tech/latest/ip" {
 			res.ProxyNodeIPAddr = net.ParseIP(res.RespPayload)
+		} else if res.TargetURL.String() == "https://icanhazip.com" {
+			escaped := strings.ReplaceAll(res.RespPayload, "\n", "")
+			res.ProxyNodeIPAddr = net.ParseIP(escaped)
 		}
 	}
 	return nil
