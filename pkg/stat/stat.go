@@ -232,13 +232,11 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	tblLatency = NewTableMesurable("Latency", outputs, measurableMetrics)
 	tblLatency.printTable()
 	rv = append(rv, tblLatency)
-	//return []ProxyChickStatTable{colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency}
 	return rv
 }
 
 func getCountyByIp(ipAddr net.IP, db geoip2.Reader) (IPGeo, error) {
 	record, err := db.Country(ipAddr)
-	//fmt.Println("record", record)
 	if err != nil {
 		return IPGeo{}, err
 	}
@@ -249,17 +247,14 @@ func ProcIPTestResults(results []*client.Result, outputs []io.Writer, db geoip2.
 	countIPCountryTbl := NewTableCountable("Exit nodes country", outputs)
 	uniqueIP := map[string]bool{}
 	for _, r := range results {
-		uniqueIP[r.ProxyNodeIPAddr.String()] = true
+		if r.Status == true {
+			uniqueIP[r.ProxyNodeIPAddr.String()] = true
+		}
 		geo, err := getCountyByIp(r.ProxyNodeIPAddr, db)
-		//fmt.Println(geo, err)
 		if err == nil {
-			//fmt.Println("---")
-			//fmt.Println(fmt.Sprintf("%s - %s", geo.CountryISO, geo.CountryName))
-			//fmt.Println("---")
 			countIPCountryTbl.add(fmt.Sprintf("%s - %s", geo.CountryISO, geo.CountryName))
 		}
 	}
 	countIPCountryTbl.printTable()
-	//fmt.Println(countIPCountryTbl)
 	return []ProxyChickStatTable{countIPCountryTbl}, len(uniqueIP)
 }
