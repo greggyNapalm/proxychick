@@ -36,6 +36,8 @@ func (self PListEvanJobCfg) MarshalJSON() ([]byte, error) {
 type JobMetrics struct {
 	Duration             time.Duration `json:"Duration"`
 	UniqueExitNodesIPCnt int           `json:"UniqueExitNodesIPCnt"`
+	ReqsCnt              int           `json:"ReqsCnt"`
+	RespCnt              int           `json:"RespCnt"`
 }
 
 func (self JobMetrics) MarshalJSON() ([]byte, error) {

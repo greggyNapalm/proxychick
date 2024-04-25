@@ -3,9 +3,11 @@ package stat
 import (
 	"fmt"
 	"github.com/greggyNapalm/proxychick/pkg/client"
+	"github.com/greggyNapalm/proxychick/pkg/job"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/montanaflynn/stats"
 	"github.com/oschwald/geoip2-golang"
+	"golang.org/x/exp/maps"
 	"io"
 	"net"
 	"strconv"
@@ -18,6 +20,7 @@ type ProxyChickStatTable interface {
 	createTable() table.Writer
 	printTable()
 	add(string)
+	getCounters() map[string]int
 }
 
 type TableCountableRow struct {
@@ -51,6 +54,10 @@ func NewTableCountable(tblName string, outputs []io.Writer) *TableCountable {
 func (self *TableCountable) add(cell string) {
 	self.DistinctCntr[cell]++
 	self.TotalCnt++
+}
+
+func (self *TableCountable) getCounters() map[string]int {
+	return self.DistinctCntr
 }
 
 func (self *TableCountable) calcPerc() map[string]float64 {
@@ -140,6 +147,9 @@ func NewTableMesurable(tblName string, outputs []io.Writer, metrics []*ColumnMes
 
 func (self *TableMesurable) add(s string) {
 }
+func (self *TableMesurable) getCounters() map[string]int {
+	return make(map[string]int)
+}
 
 func (self *TableMesurable) createTable() table.Writer {
 	t := table.NewWriter()
@@ -171,7 +181,7 @@ type IPGeo struct {
 	CountryISO  string
 }
 
-func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport string) []ProxyChickStatTable {
+func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport string, jobMetrics *job.JobMetrics) []ProxyChickStatTable {
 	rv := []ProxyChickStatTable{}
 	var colSucc, colErr, colTgtStatus, colPrxStatus, tblLatency ProxyChickStatTable
 	var measurableMetrics []*ColumnMesurable
@@ -186,6 +196,7 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	latConnect := NewColumnMesurable("Connect")
 	latPrxResp := NewColumnMesurable("ProxyResp")
 	latTLS := NewColumnMesurable("TLSHandshake")
+	uniqueIP := map[string]bool{}
 	for _, r := range results {
 		if strings.HasPrefix(r.ProxyURL.String(), "http") {
 			containsHTTPscheme = true
@@ -202,6 +213,7 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 			// these metrics works for both transport protocols TCP and UDP
 			latTTFB.vals = append(latTTFB.vals, float64(r.Latency.TTFB))
 			latPrxResp.vals = append(latPrxResp.vals, float64(r.Latency.ProxyResp))
+			uniqueIP[r.ProxyNodeIPAddr.String()] = true
 		} else {
 			colSucc.add("error")
 			errNorm, _ := r.Error.MarshalCSV()
@@ -215,6 +227,12 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	colSucc.printTable()
 	colErr.printTable()
 	rv = append(rv, colSucc, colErr)
+	jobMetrics.UniqueExitNodesIPCnt = len(uniqueIP)
+	reqRespCounters := colSucc.getCounters()
+	jobMetrics.RespCnt = reqRespCounters["ok"]
+	for _, el := range maps.Values(reqRespCounters) {
+		jobMetrics.ReqsCnt += el
+	}
 	measurableMetrics = []*ColumnMesurable{latTTFB}
 	if trasnport == "tcp" {
 		measurableMetrics = append(measurableMetrics, latDNS, latConnect, latTLS)
@@ -243,18 +261,14 @@ func getCountyByIp(ipAddr net.IP, db geoip2.Reader) (IPGeo, error) {
 	return IPGeo{record.Country.Names["en"], record.Country.IsoCode}, nil
 }
 
-func ProcIPTestResults(results []*client.Result, outputs []io.Writer, db geoip2.Reader) ([]ProxyChickStatTable, int) {
+func ProcIPTestResults(results []*client.Result, outputs []io.Writer, db geoip2.Reader) []ProxyChickStatTable {
 	countIPCountryTbl := NewTableCountable("Exit nodes country", outputs)
-	uniqueIP := map[string]bool{}
 	for _, r := range results {
-		if r.Status == true {
-			uniqueIP[r.ProxyNodeIPAddr.String()] = true
-		}
 		geo, err := getCountyByIp(r.ProxyNodeIPAddr, db)
 		if err == nil {
 			countIPCountryTbl.add(fmt.Sprintf("%s - %s", geo.CountryISO, geo.CountryName))
 		}
 	}
 	countIPCountryTbl.printTable()
-	return []ProxyChickStatTable{countIPCountryTbl}, len(uniqueIP)
+	return []ProxyChickStatTable{countIPCountryTbl}
 }

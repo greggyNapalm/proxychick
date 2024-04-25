@@ -7,7 +7,9 @@ require (
 	github.com/greggyNapalm/gost v0.0.0-20240224191152-caf40b2a63f0
 	github.com/jedib0t/go-pretty/v6 v6.5.4
 	github.com/montanaflynn/stats v0.7.1
+	github.com/oschwald/geoip2-golang v1.9.0
 	github.com/schollz/progressbar/v3 v3.14.1
+	golang.org/x/exp v0.0.0-20230203172020-98cc5a0785f9
 )
 
 require (
@@ -29,7 +31,6 @@ require (
 	github.com/mdlayher/vsock v1.2.1 // indirect
 	github.com/miekg/dns v1.1.47 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
-	github.com/oschwald/geoip2-golang v1.9.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.11.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect

@@ -208,15 +208,20 @@ func main() {
 	outTxt, _ := formatResulst(results, "csv")
 	retFinalText(cmdCfg.outPath, outTxt)
 	if cmdCfg.isStatsEnables {
-		_ = stat.ProcTestResults(results, statOutputs, cmdCfg.transport)
+		_ = stat.ProcTestResults(results, statOutputs, cmdCfg.transport, &jobMetrics)
+
 		if cmdCfg.countryMmdbPath != "" {
 			db, err := geoip2.Open(cmdCfg.countryMmdbPath)
 			defer db.Close()
 			if err == nil {
-				_, jobMetrics.UniqueExitNodesIPCnt = stat.ProcIPTestResults(results, statOutputs, *db)
-				fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))
-				fmt.Println("Unique Exit Nodes IPs:", jobMetrics.UniqueExitNodesIPCnt)
+				_ = stat.ProcIPTestResults(results, statOutputs, *db)
+
 			}
 		}
 	}
+	fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))
+	fmt.Println("Unique Exit Nodes IPs:", jobMetrics.UniqueExitNodesIPCnt,
+		fmt.Sprintf(" (%.0f%% of Rquests and ", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.ReqsCnt)),
+		fmt.Sprintf("%.0f%% of Responces)", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.RespCnt)),
+	)
 }
