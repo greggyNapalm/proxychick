@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -11,8 +12,12 @@ import (
 	"github.com/greggyNapalm/proxychick/pkg/stat"
 	"github.com/greggyNapalm/proxychick/pkg/utils"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/saintfish/chardet"
 	"github.com/schollz/progressbar/v3"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -115,17 +120,35 @@ func NewCmdCfg() CmdCfg {
 
 func GetProxyStrings(inPath string) []string {
 	rv := []string{}
-	var bytes []byte
+	var buff []byte
 	var err error
+	var strContent string
 	if inPath == "STDIN" {
-		bytes, err = io.ReadAll(os.Stdin)
+		buff, err = io.ReadAll(os.Stdin)
 	} else {
-		bytes, err = os.ReadFile(inPath)
+		buff, err = os.ReadFile(inPath)
 	}
 	if err != nil {
 		log.Fatal("Can't read file:" + inPath)
 	}
-	for _, el := range strings.Split(string(bytes), "\n") {
+	strContent = string(buff)
+	detector := chardet.NewTextDetector()
+	result, err := detector.DetectBest(buff)
+	if err == nil {
+		//If you created your proxy list file by redirecting STDOUT in Powershell,
+		//the > operator with use Out-File function which uses UTF16 encoding by default.
+		//To get ASCII text from it, we need to guess encoding and decode it.
+		if result.Charset == "UTF-16LE" {
+			win16be := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
+			utf16bom := unicode.BOMOverride(win16be.NewDecoder())
+			unicodeReader := transform.NewReader(bytes.NewReader(buff), utf16bom)
+			decoded, err := ioutil.ReadAll(unicodeReader)
+			if err == nil {
+				strContent = string(decoded)
+			}
+		}
+	}
+	for _, el := range strings.Split(strContent, "\n") {
 		if el != "" {
 			rv = append(rv, strings.Replace(el, "\r", "", -1))
 		}

@@ -8,8 +8,10 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.5.4
 	github.com/montanaflynn/stats v0.7.1
 	github.com/oschwald/geoip2-golang v1.9.0
+	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
 	github.com/schollz/progressbar/v3 v3.14.1
 	golang.org/x/exp v0.0.0-20230203172020-98cc5a0785f9
+	golang.org/x/text v0.14.0
 )
 
 require (
