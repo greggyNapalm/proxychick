@@ -56,7 +56,7 @@ type Result struct {
 	ProxyServIPAddr  net.IP      `csv:"ProxyServIPAddr",json:"ProxyServIPAddr"`
 	ProxyNodeIPAddr  net.IP      `csv:"ProxyNodeIPAddr",json:"ProxyNodeIPAddr"`
 	Error            PChickError `csv:"error",json:"error"`
-	Ts               time.Time   `csv:"-",json:"ts"`
+	Ts               time.Time   `csv:"ts",json:"ts"`
 }
 
 func (res *Result) MarshalJSON() ([]byte, error) {

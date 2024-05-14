@@ -93,6 +93,65 @@ func (self *TableCountable) printTable() {
 	}
 }
 
+type DescendingIteration struct {
+	name  string
+	value float64
+}
+
+type TableDescendingProgression struct {
+	Name          string                `json:"name"`
+	TableType     string                `json:"TableType"`
+	Headers       table.Row             `json:"headers"`
+	outputs       []io.Writer           `json:"-"`
+	TableWriter   table.Writer          `json:"-"`
+	IterationsLog []DescendingIteration `json:"-"`
+}
+
+func NewTableDescendingProgression(tblName string, outputs []io.Writer) *TableDescendingProgression {
+	var c TableDescendingProgression
+	c.Name = tblName
+	c.TableType = "descending_progression"
+	c.Headers = table.Row{"iter", "count", "percent"}
+	c.outputs = outputs
+	return &c
+}
+
+func (self *TableDescendingProgression) add(result string) {
+	fr, _ := strconv.ParseFloat(result, 64)
+	self.IterationsLog = append(self.IterationsLog, DescendingIteration{
+		name:  fmt.Sprintf("Loop %d", len(self.IterationsLog)+1),
+		value: fr,
+	})
+}
+
+func (self *TableDescendingProgression) getCounters() map[string]int {
+	output := make(map[string]int)
+	for _, i := range self.IterationsLog {
+		output[i.name] = int(i.value)
+	}
+	return output
+}
+
+func (self *TableDescendingProgression) createTable() table.Writer {
+	t := table.NewWriter()
+	for _, o := range self.outputs {
+		t.SetOutputMirror(o)
+	}
+	t.AppendHeader(self.Headers)
+	for _, iteration := range self.IterationsLog {
+		t.AppendRow([]interface{}{iteration.name, iteration.value, fmt.Sprintf("%.2f", 100*float64(iteration.value)/float64(self.IterationsLog[0].value))})
+	}
+	return t
+}
+
+func (self *TableDescendingProgression) printTable() {
+	w := self.createTable()
+	if len(self.outputs) > 0 {
+		fmt.Println("\n", self.Name)
+		w.Render()
+	}
+}
+
 type ColumnMesurable struct {
 	ColName     string             `json:"name"`
 	vals        []float64          `json:"-"`
@@ -271,4 +330,13 @@ func ProcIPTestResults(results []*client.Result, outputs []io.Writer, db geoip2.
 	}
 	countIPCountryTbl.printTable()
 	return []ProxyChickStatTable{countIPCountryTbl}
+}
+
+func ProcRotationTestResults(loopMem []int, outputs []io.Writer) []ProxyChickStatTable {
+	rotation := NewTableDescendingProgression("IP rotation", outputs)
+	for _, v := range loopMem {
+		rotation.add(fmt.Sprintf("%d", v))
+	}
+	rotation.printTable()
+	return []ProxyChickStatTable{rotation}
 }

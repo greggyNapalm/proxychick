@@ -44,6 +44,7 @@ type CmdCfg struct {
 	prxProto            string
 	timeOut             time.Duration
 	loop                int
+	interval            time.Duration
 	transport           string
 	countryMmdbPath     string
 }
@@ -58,6 +59,7 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.outPath, "o", "STDOUT", "path to the results file")
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	var timeOut = flag.String("to", "10s", "Timeout for entire request")
+	var interval = flag.String("interval", "0", "Interval between loops")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
 	flag.StringVar(&rv.transport, "transport", "tcp", "Transport protocol for interaction with the target. Will be encapsulated into proxy protocol.")
 	var pBarDisabled = flag.Bool("noProgressBar", false, "Disable the progress meter")
@@ -72,6 +74,12 @@ func NewCmdCfg() CmdCfg {
 	if err != nil {
 		log.Fatal("Can't parse timeout(to) cmd param:" + err.Error())
 	}
+
+	rv.interval, err = time.ParseDuration(*interval)
+	if err != nil {
+		log.Fatalf("Can't parse interval cmd param: " + err.Error())
+	}
+
 	rv.isProgressBarEnabled = !(*pBarDisabled)
 	rv.isStatsEnables = !(*statDisabled)
 	var debugEnv = os.Getenv("PROXYCHICK_DEBUG")
@@ -208,23 +216,22 @@ func main() {
 			pStringsFormatted = append(pStringsFormatted, prxURL)
 		}
 	}
-	if cmdCfg.loop > 1 {
-		var tmpStringsFormatted []*url.URL
-		for _ = range cmdCfg.loop {
-			tmpStringsFormatted = append(tmpStringsFormatted, pStringsFormatted...)
-		}
-		pStringsFormatted = tmpStringsFormatted
-	}
 	JobStarted := time.Now()
-	go job.EvaluateProxyList(pStringsFormatted, &jobCfg, resultsCh)
 	if cmdCfg.isProgressBarEnabled {
-		bar = progressbar.Default(int64(len(pStringsFormatted)))
+		bar = progressbar.Default(int64(len(pStringsFormatted) * cmdCfg.loop))
 	}
-	for i := 0; i < len(pStringsFormatted); i++ {
-		res := <-resultsCh
-		results = append(results, &res)
-		if cmdCfg.isProgressBarEnabled {
-			bar.Add(1)
+	for l := range cmdCfg.loop {
+		if l > 0 {
+			time.Sleep(cmdCfg.interval)
+		}
+
+		go job.EvaluateProxyList(pStringsFormatted, &jobCfg, resultsCh)
+		for i := 0; i < len(pStringsFormatted); i++ {
+			res := <-resultsCh
+			results = append(results, &res)
+			if cmdCfg.isProgressBarEnabled {
+				bar.Add(1)
+			}
 		}
 	}
 	jobMetrics.Duration = time.Since(JobStarted)
@@ -242,6 +249,29 @@ func main() {
 			}
 		}
 	}
+
+	//if non zero loop interval - count non rotated IPs
+	if cmdCfg.loop > 1 && cmdCfg.interval > 0 {
+		loopsMem := make([]int, 0, cmdCfg.loop)
+		ipMap := make(map[string]string)
+		for i, result := range results {
+			if i < len(pStringsFormatted) {
+				ipMap[result.ProxyURL.String()] = result.ProxyNodeIPAddr.String()
+			}
+			if i >= len(pStringsFormatted) {
+				oldIP, ok := ipMap[result.ProxyURL.String()]
+				if ok && oldIP != result.ProxyNodeIPAddr.String() {
+					delete(ipMap, result.ProxyURL.String())
+				}
+			}
+			if i+1 >= len(pStringsFormatted) && (i+1)%len(pStringsFormatted) == 0 {
+				loopsMem = append(loopsMem, len(ipMap))
+			}
+		}
+		_ = stat.ProcRotationTestResults(loopsMem, statOutputs)
+	}
+
+	fmt.Printf("\n")
 	fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))
 	fmt.Println("Unique Exit Nodes IPs:", jobMetrics.UniqueExitNodesIPCnt,
 		fmt.Sprintf(" (%.0f%% of Requests and ", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.ReqsCnt)),
