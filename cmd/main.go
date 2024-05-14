@@ -39,7 +39,7 @@ type CmdCfg struct {
 	targetAddr          string
 	inPath              string
 	outPath             string
-	isPorgresBarEnabled bool
+	isProgressBarEnabled bool
 	isStatsEnables      bool
 	prxProto            string
 	timeOut             time.Duration
@@ -59,8 +59,8 @@ func NewCmdCfg() CmdCfg {
 	flag.StringVar(&rv.prxProto, "p", "http", "Proxy protocol. If not specified in proxy URL, choose one of http/https/socks4/socks4a/socks5/socks5h")
 	var timeOut = flag.String("to", "10s", "Timeout for entire request")
 	flag.IntVar(&rv.loop, "loop", 1, "Loop over proxylist content N times")
-	flag.StringVar(&rv.transport, "transport", "tcp", "Transport protocol for interaction with the target. Will be incapsulated into proxy protocol.")
-	var pBarDisabled = flag.Bool("noProgresBar", false, "Disable the progress meter")
+	flag.StringVar(&rv.transport, "transport", "tcp", "Transport protocol for interaction with the target. Will be encapsulated into proxy protocol.")
+	var pBarDisabled = flag.Bool("noProgressBar", false, "Disable the progress meter")
 	var statDisabled = flag.Bool("noStat", false, "Disable stats output")
 	var targetAddr = flag.String("t", defaultTCPTarget, "Target URL(TCP) and HOST:PORT(UDP)")
 	var showVersion = flag.Bool("version", false, "Show version and exit")
@@ -72,7 +72,7 @@ func NewCmdCfg() CmdCfg {
 	if err != nil {
 		log.Fatal("Can't parse timeout(to) cmd param:" + err.Error())
 	}
-	rv.isPorgresBarEnabled = !(*pBarDisabled)
+	rv.isProgressBarEnabled = !(*pBarDisabled)
 	rv.isStatsEnables = !(*statDisabled)
 	var debugEnv = os.Getenv("PROXYCHICK_DEBUG")
 	if *showVersion {
@@ -156,18 +156,18 @@ func GetProxyStrings(inPath string) []string {
 	return rv
 }
 
-func formatResulst(results []*client.Result, format string) (rv string, err error) {
+func formatResults(results []*client.Result, format string) (rv string, err error) {
 	if format == "" {
 		format = "csv"
 	}
 
-	err = errors.New("formatResuls: unsuported result format " + format)
+	err = errors.New("formatResults: unsupported result format " + format)
 	if format == "csv" {
 		rv, err = gocsv.MarshalString(results)
 	}
 	if format == "json" {
 		var jsonDoc []byte
-		//TODO: impl working JSON serialisation
+		//TODO: impl working JSON serialization
 		//fmt.Printf("t1: %T\n", results[0])
 		jsonDoc, err = json.Marshal(results)
 		rv = string(jsonDoc)
@@ -188,7 +188,7 @@ func main() {
 	var results []*client.Result
 	var bar *progressbar.ProgressBar
 	var pStringsRaw []string
-	var pStringsFormated []*url.URL
+	var pStringsFormatted []*url.URL
 	statOutputs := []io.Writer{os.Stdout}
 	cmdCfg := NewCmdCfg()
 	pStringsRaw = GetProxyStrings(cmdCfg.inPath)
@@ -205,30 +205,30 @@ func main() {
 		if err != nil {
 			log.Fatal(PrxStrRaw + " | " + err.Error())
 		} else {
-			pStringsFormated = append(pStringsFormated, prxURL)
+			pStringsFormatted = append(pStringsFormatted, prxURL)
 		}
 	}
 	if cmdCfg.loop > 1 {
-		var tmpStringsFormated []*url.URL
+		var tmpStringsFormatted []*url.URL
 		for _ = range cmdCfg.loop {
-			tmpStringsFormated = append(tmpStringsFormated, pStringsFormated...)
+			tmpStringsFormatted = append(tmpStringsFormatted, pStringsFormatted...)
 		}
-		pStringsFormated = tmpStringsFormated
+		pStringsFormatted = tmpStringsFormatted
 	}
 	JobStarted := time.Now()
-	go job.EvaluateProxyList(pStringsFormated, &jobCfg, resultsCh)
-	if cmdCfg.isPorgresBarEnabled {
-		bar = progressbar.Default(int64(len(pStringsFormated)))
+	go job.EvaluateProxyList(pStringsFormatted, &jobCfg, resultsCh)
+	if cmdCfg.isProgressBarEnabled {
+		bar = progressbar.Default(int64(len(pStringsFormatted)))
 	}
-	for i := 0; i < len(pStringsFormated); i++ {
+	for i := 0; i < len(pStringsFormatted); i++ {
 		res := <-resultsCh
 		results = append(results, &res)
-		if cmdCfg.isPorgresBarEnabled {
+		if cmdCfg.isProgressBarEnabled {
 			bar.Add(1)
 		}
 	}
 	jobMetrics.Duration = time.Since(JobStarted)
-	outTxt, _ := formatResulst(results, "csv")
+	outTxt, _ := formatResults(results, "csv")
 	retFinalText(cmdCfg.outPath, outTxt)
 	if cmdCfg.isStatsEnables {
 		_ = stat.ProcTestResults(results, statOutputs, cmdCfg.transport, &jobMetrics)
@@ -244,7 +244,7 @@ func main() {
 	}
 	fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))
 	fmt.Println("Unique Exit Nodes IPs:", jobMetrics.UniqueExitNodesIPCnt,
-		fmt.Sprintf(" (%.0f%% of Rquests and ", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.ReqsCnt)),
-		fmt.Sprintf("%.0f%% of Responces)", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.RespCnt)),
+		fmt.Sprintf(" (%.0f%% of Requests and ", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.ReqsCnt)),
+		fmt.Sprintf("%.0f%% of Responses)", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.RespCnt)),
 	)
 }
