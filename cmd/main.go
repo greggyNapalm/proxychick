@@ -34,19 +34,19 @@ var (
 )
 
 type CmdCfg struct {
-	maxConcurrency      int
-	targetURL           *url.URL
-	targetAddr          string
-	inPath              string
-	outPath             string
+	maxConcurrency       int
+	targetURL            *url.URL
+	targetAddr           string
+	inPath               string
+	outPath              string
 	isProgressBarEnabled bool
-	isStatsEnables      bool
-	prxProto            string
-	timeOut             time.Duration
-	loop                int
-	interval            time.Duration
-	transport           string
-	countryMmdbPath     string
+	isStatsEnables       bool
+	prxProto             string
+	timeOut              time.Duration
+	loop                 int
+	interval             time.Duration
+	transport            string
+	countryMmdbPath      string
 }
 
 func NewCmdCfg() CmdCfg {
@@ -220,12 +220,36 @@ func main() {
 	if cmdCfg.isProgressBarEnabled {
 		bar = progressbar.Default(int64(len(pStringsFormatted) * cmdCfg.loop))
 	}
-	for l := range cmdCfg.loop {
-		if l > 0 {
-			time.Sleep(cmdCfg.interval)
-		}
 
+	if cmdCfg.loop > 1 && cmdCfg.interval > 0 {
+		// process in step based mode if there's an interstep interval
+		for l := range cmdCfg.loop {
+			if l > 0 {
+				time.Sleep(cmdCfg.interval)
+			}
+
+			go job.EvaluateProxyList(pStringsFormatted, &jobCfg, resultsCh)
+			for i := 0; i < len(pStringsFormatted); i++ {
+				res := <-resultsCh
+				results = append(results, &res)
+				if cmdCfg.isProgressBarEnabled {
+					bar.Add(1)
+				}
+			}
+		}
+	} else {
+		// process in bulk unpaused mode
+		if cmdCfg.loop > 1 {
+			var tmpStringsFormatted []*url.URL
+			for _ = range cmdCfg.loop {
+				tmpStringsFormatted = append(tmpStringsFormatted, pStringsFormatted...)
+			}
+			pStringsFormatted = tmpStringsFormatted
+		}
 		go job.EvaluateProxyList(pStringsFormatted, &jobCfg, resultsCh)
+		if cmdCfg.isProgressBarEnabled {
+			bar = progressbar.Default(int64(len(pStringsFormatted)))
+		}
 		for i := 0; i < len(pStringsFormatted); i++ {
 			res := <-resultsCh
 			results = append(results, &res)
@@ -234,6 +258,7 @@ func main() {
 			}
 		}
 	}
+
 	jobMetrics.Duration = time.Since(JobStarted)
 	outTxt, _ := formatResults(results, "csv")
 	retFinalText(cmdCfg.outPath, outTxt)
