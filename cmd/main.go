@@ -14,6 +14,7 @@ import (
 	"github.com/oschwald/geoip2-golang"
 	"github.com/saintfish/chardet"
 	"github.com/schollz/progressbar/v3"
+	"github.com/thanhpk/randstr"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 	"io"
@@ -158,7 +159,9 @@ func GetProxyStrings(inPath string) []string {
 	}
 	for _, el := range strings.Split(strContent, "\n") {
 		if el != "" {
-			rv = append(rv, strings.Replace(el, "\r", "", -1))
+			el = strings.Replace(el, "\r", "", -1)
+			el = strings.Replace(el, "%s", randstr.String(16), -1)
+			rv = append(rv, el)
 		}
 	}
 	return rv
