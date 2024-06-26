@@ -42,6 +42,7 @@ require (
 	github.com/shadowsocks/shadowsocks-go v0.0.0-20200409064450-3e585ff90601 // indirect
 	github.com/templexxx/cpu v0.1.0 // indirect
 	github.com/templexxx/xorsimd v0.4.2 // indirect
+	github.com/thanhpk/randstr v1.0.6
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/xtaci/kcp-go/v5 v5.6.7 // indirect
 	github.com/xtaci/tcpraw v1.2.25 // indirect
