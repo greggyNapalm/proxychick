@@ -242,9 +242,10 @@ func main() {
 			}
 		}
 	}
-	fmt.Println("Duration:", fmt.Sprintf("%s", jobMetrics.Duration))
-	fmt.Println("Unique Exit Nodes IPs:", jobMetrics.UniqueExitNodesIPCnt,
-		fmt.Sprintf(" (%.0f%% of Rquests and ", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.ReqsCnt)),
-		fmt.Sprintf("%.0f%% of Responces)", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.RespCnt)),
-	)
+	for _, o := range statOutputs {
+	    o.Write([]byte(fmt.Sprintf("Duration:%s\n", jobMetrics.Duration.String())))
+	    o.Write([]byte(fmt.Sprintf("Unique Exit Nodes IPs:%d", jobMetrics.UniqueExitNodesIPCnt)))
+	    o.Write([]byte(fmt.Sprintf(" (%.0f%% of Rquests and ", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.ReqsCnt))))
+	    o.Write([]byte(fmt.Sprintf("%.0f%% of Responces)", 100.00*float64(jobMetrics.UniqueExitNodesIPCnt)/float64(jobMetrics.RespCnt))))
+	}
 }

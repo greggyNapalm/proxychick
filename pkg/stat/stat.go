@@ -71,9 +71,6 @@ func (self *TableCountable) calcPerc() map[string]float64 {
 
 func (self *TableCountable) createTable() table.Writer {
 	t := table.NewWriter()
-	for _, o := range self.outputs {
-		t.SetOutputMirror(o)
-	}
 	t.AppendHeader(self.Headers)
 	self.calcPerc()
 	for colName, colCnt := range self.DistinctCntr {
@@ -88,8 +85,11 @@ func (self *TableCountable) createTable() table.Writer {
 func (self *TableCountable) printTable() {
 	w := self.createTable()
 	if len(self.outputs) > 0 {
-		fmt.Println("\n", self.Name)
-		w.Render()
+		for _, o := range self.outputs {
+		    o.Write([]byte(fmt.Sprintf("\n%s\n", self.Name)))
+		    w.SetOutputMirror(o)
+			w.Render()
+	    }
 	}
 }
 
@@ -153,9 +153,6 @@ func (self *TableMesurable) getCounters() map[string]int {
 
 func (self *TableMesurable) createTable() table.Writer {
 	t := table.NewWriter()
-	for _, o := range self.outputs {
-		t.SetOutputMirror(o)
-	}
 	t.AppendHeader(self.Headers)
 	for _, m := range self.Metrics {
 		self.Rows = append(self.Rows, m)
@@ -171,8 +168,11 @@ func (self *TableMesurable) createTable() table.Writer {
 func (self *TableMesurable) printTable() {
 	w := self.createTable()
 	if len(self.outputs) > 0 {
-		fmt.Println("\n", self.Name)
-		w.Render()
+		for _, o := range self.outputs {
+		    o.Write([]byte(fmt.Sprintf("\n%s\n", self.Name)))
+		    w.SetOutputMirror(o)
+			w.Render()
+	    }
 	}
 }
 
