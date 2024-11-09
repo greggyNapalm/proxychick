@@ -18,7 +18,7 @@ var defaultPercentiles = []float64{50.0, 75.0, 85.0, 90.0, 95.0, 99.0, 100.0}
 
 type ProxyChickStatTable interface {
 	createTable() table.Writer
-	printTable()
+	PrintTable()
 	add(string)
 	getCounters() map[string]int
 }
@@ -82,7 +82,7 @@ func (self *TableCountable) createTable() table.Writer {
 	})
 	return t
 }
-func (self *TableCountable) printTable() {
+func (self *TableCountable) PrintTable() {
 	w := self.createTable()
 	if len(self.outputs) > 0 {
 		for _, o := range self.outputs {
@@ -95,7 +95,7 @@ func (self *TableCountable) printTable() {
 
 type ColumnMesurable struct {
 	ColName     string             `json:"name"`
-	vals        []float64          `json:"-"`
+	Vals        []float64          `json:"-"`
 	Percentiles []float64          `json:"-"`
 	Quantiles   map[string]float64 `json:"quantiles"`
 }
@@ -110,7 +110,7 @@ func NewColumnMesurable(ColName string) *ColumnMesurable {
 func (self *ColumnMesurable) calcPercentiles() map[string]float64 {
 	rv := make(map[string]float64)
 	for _, p := range self.Percentiles {
-		quantile, _ := stats.Percentile(self.vals, p)
+		quantile, _ := stats.Percentile(self.Vals, p)
 		rv[fmt.Sprintf("%.0f", p)] = quantile
 	}
 	self.Quantiles = rv
@@ -165,7 +165,7 @@ func (self *TableMesurable) createTable() table.Writer {
 	}
 	return t
 }
-func (self *TableMesurable) printTable() {
+func (self *TableMesurable) PrintTable() {
 	w := self.createTable()
 	if len(self.outputs) > 0 {
 		for _, o := range self.outputs {
@@ -206,13 +206,13 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 			colErr.add("ok")
 			if trasnport == "tcp" {
 				// these metrics collection implemented only for TCP and they will eq to 0(zero) in case of error
-				latDNS.vals = append(latDNS.vals, float64(r.Latency.DNSresolve))
-				latConnect.vals = append(latConnect.vals, float64(r.Latency.Connect))
-				latTLS.vals = append(latTLS.vals, float64(r.Latency.TLSHandshake))
+				latDNS.Vals = append(latDNS.Vals, float64(r.Latency.DNSresolve))
+				latConnect.Vals = append(latConnect.Vals, float64(r.Latency.Connect))
+				latTLS.Vals = append(latTLS.Vals, float64(r.Latency.TLSHandshake))
 			}
 			// these metrics works for both transport protocols TCP and UDP
-			latTTFB.vals = append(latTTFB.vals, float64(r.Latency.TTFB))
-			latPrxResp.vals = append(latPrxResp.vals, float64(r.Latency.ProxyResp))
+			latTTFB.Vals = append(latTTFB.Vals, float64(r.Latency.TTFB))
+			latPrxResp.Vals = append(latPrxResp.Vals, float64(r.Latency.ProxyResp))
 			uniqueIP[r.ProxyNodeIPAddr.String()] = true
 		} else {
 			colSucc.add("error")
@@ -224,8 +224,8 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 			colPrxStatus.add(strconv.Itoa(r.ProxyStatusCode))
 		}
 	}
-	colSucc.printTable()
-	colErr.printTable()
+	colSucc.PrintTable()
+	colErr.PrintTable()
 	rv = append(rv, colSucc, colErr)
 	jobMetrics.UniqueExitNodesIPCnt = len(uniqueIP)
 	reqRespCounters := colSucc.getCounters()
@@ -236,10 +236,10 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 	measurableMetrics = []*ColumnMesurable{latTTFB}
 	if trasnport == "tcp" {
 		measurableMetrics = append(measurableMetrics, latDNS, latConnect, latTLS)
-		colTgtStatus.printTable()
+		colTgtStatus.PrintTable()
 		rv = append(rv, colTgtStatus)
 		if containsHTTPscheme {
-			colPrxStatus.printTable()
+			colPrxStatus.PrintTable()
 			rv = append(rv, colPrxStatus)
 			measurableMetrics = append(measurableMetrics, latPrxResp)
 		}
@@ -248,7 +248,7 @@ func ProcTestResults(results []*client.Result, outputs []io.Writer, trasnport st
 		measurableMetrics = append(measurableMetrics, latPrxResp)
 	}
 	tblLatency = NewTableMesurable("Latency", outputs, measurableMetrics)
-	tblLatency.printTable()
+	tblLatency.PrintTable()
 	rv = append(rv, tblLatency)
 	return rv
 }
@@ -269,6 +269,6 @@ func ProcIPTestResults(results []*client.Result, outputs []io.Writer, db geoip2.
 			countIPCountryTbl.add(fmt.Sprintf("%s - %s", geo.CountryISO, geo.CountryName))
 		}
 	}
-	countIPCountryTbl.printTable()
+	countIPCountryTbl.PrintTable()
 	return []ProxyChickStatTable{countIPCountryTbl}
 }
