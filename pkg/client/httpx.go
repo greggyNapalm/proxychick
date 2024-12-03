@@ -47,8 +47,13 @@ func TestHTTP(targetURL *url.URL, proxyURL *url.URL, timeOut time.Duration, incl
 		},
 	}
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), clientTrace))
+	dialer := &net.Dialer{
+		Timeout:   timeOut,
+		KeepAlive: -1,
+	}
 	transport := http.Transport{
 		Proxy:                 http.ProxyURL(proxyURL),
+		DialContext:           dialer.DialContext,
 		TLSHandshakeTimeout:   timeOut,
 		ResponseHeaderTimeout: timeOut,
 		ExpectContinueTimeout: timeOut,
