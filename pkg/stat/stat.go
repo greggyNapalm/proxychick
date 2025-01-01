@@ -110,8 +110,11 @@ func NewColumnMesurable(ColName string) *ColumnMesurable {
 func (self *ColumnMesurable) calcPercentiles() map[string]float64 {
 	rv := make(map[string]float64)
 	for _, p := range self.Percentiles {
-		quantile, _ := stats.Percentile(self.Vals, p)
-		rv[fmt.Sprintf("%.0f", p)] = quantile
+		if quantile, err := stats.Percentile(self.Vals, p); err != nil {
+			rv[fmt.Sprintf("%.0f", p)] = 0
+		} else {
+			rv[fmt.Sprintf("%.0f", p)] = quantile
+		}
 	}
 	self.Quantiles = rv
 	return rv
